@@ -150,6 +150,13 @@
                      <p id="summary-non-worked-paid-hol-pay" class="text-xl font-bold text-indigo-300 mt-1">₱0.00</p>
                  </div>
              </div>
+             <!-- NIGHT DIFFERENTIAL PAY METRIC -->
+             <div class="grid grid-cols-1 mb-4">
+                <div class="summary-box bg-gray-800 p-3 rounded-xl border border-blue-700/50">
+                    <p class="text-xs font-semibold text-blue-400">Total Night Differential Pay</p>
+                    <p id="summary-night-differential-pay" class="text-2xl font-bold text-blue-300 mt-1">₱0.00</p>
+                </div>
+             </div>
             <!-- Total Pay Box -->
              <div class="grid grid-cols-1">
                 <div class="summary-box bg-indigo-900/50 p-3 rounded-xl border border-indigo-700/50">
@@ -301,6 +308,13 @@
                     <label for="rate-regular" class="block text-sm font-medium text-gray-300 mb-1">Regular Hourly Rate (₱)</label>
                     <input type="number" step="0.01" min="0" id="rate-regular" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500 transition duration-150" placeholder="e.g., 25.00">
                 </div>
+                <!-- UPDATED NIGHT DIFFERENTIAL RATE TO HOURLY (FLAT RATE) -->
+                <div>
+                    <label for="rate-night-differential" class="block text-sm font-medium text-gray-300 mb-1">Night Differential Hourly Rate (₱)</label>
+                    <input type="number" step="0.01" min="0" id="rate-night-differential" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-blue-500 focus:border-blue-500 transition duration-150" placeholder="e.g., 2.50">
+                    <p class="text-xs text-gray-400 mt-1">Flat hourly rate applied for time worked between 10 PM (22:00) and 6 AM (06:00).</p>
+                </div>
+                <!-- END UPDATED NIGHT DIFFERENTIAL RATE -->
                 <div>
                     <label for="rate-overtime" class="block text-sm font-medium text-gray-300 mb-1">Overtime Hourly Rate (₱)</label>
                     <input type="number" step="0.01" min="0" id="rate-overtime" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500 transition duration-150" placeholder="e.g., 31.25">
@@ -374,6 +388,7 @@
                 summarySpecialHolPay: document.getElementById('summary-special-hol-pay'),
                 summaryLegalHolPay: document.getElementById('summary-legal-hol-pay'),
                 summaryNonWorkedPaidHolPay: document.getElementById('summary-non-worked-paid-hol-pay'),
+                summaryNightDifferentialPay: document.getElementById('summary-night-differential-pay'), 
                 summaryTotalPay: document.getElementById('summary-total-pay'),
                 // Summaries (Hours Breakdown)
                 summaryDayHours: document.getElementById('summary-day-hours'),
@@ -405,6 +420,7 @@
                 payRateBtn: document.getElementById('pay-rate-btn'), ratesSettingsModalBackdrop: document.getElementById('rates-settings-modal-backdrop'),
                 ratesForm: document.getElementById('rates-form'), rateRegular: document.getElementById('rate-regular'), rateOvertime: document.getElementById('rate-overtime'),
                 rateSpecialHoliday: document.getElementById('rate-special-holiday'), rateLegalHoliday: document.getElementById('rate-legal-holiday'),
+                rateNightDifferential: document.getElementById('rate-night-differential'), 
                 // Data Management Modal
                 manageDataModalBackdrop: document.getElementById('manage-data-modal-backdrop'),
                 deleteMonthSelect: document.getElementById('delete-month-select'), deleteYearSelect: document.getElementById('delete-year-select'),
@@ -414,8 +430,8 @@
 
             let allLogs = []; 
             const LOGS_STORAGE_KEY = 'workMonitoringAppLogs_v7_manual'; 
-            const RATES_STORAGE_KEY = 'workMonitoringAppRates_v1';
-            const PAID_HOLIDAY_HOURS_EQUIVALENT = 8; // Assumes 8 hours of basic pay for non-worked paid holidays
+            const RATES_STORAGE_KEY = 'workMonitoringAppRates_v3'; // Updated V3 for flat ND rate
+            const PAID_HOLIDAY_HOURS_EQUIVALENT = 8; 
             let payRates = {};
 
             // --- Local Storage Utilities ---
@@ -440,6 +456,7 @@
                 overtime: 31.25, // 1.25x
                 specialHoliday: 32.50, // 1.3x
                 legalHoliday: 50.00, // 2.0x
+                nightDifferential: 2.50, // Default flat ND rate (e.g., 10% of 25)
             };
 
             const loadRates = () => {
@@ -450,6 +467,10 @@
                     console.error("Error loading rates:", error);
                     payRates = DEFAULT_RATES;
                 }
+                // Ensure the new rate exists if loading an old version
+                if (typeof payRates.nightDifferential === 'undefined' || isNaN(payRates.nightDifferential)) {
+                    payRates.nightDifferential = DEFAULT_RATES.nightDifferential;
+                }
             };
 
             const saveRates = () => {
@@ -457,32 +478,6 @@
                 catch (error) { console.error("Error saving rates:", error); }
             };
             
-            /**
-             * Calculates the estimated gross pay for a single log entry.
-             */
-            const calculateTotalPay = (log) => {
-                let pay = 0;
-                const hours = log.totalHours || 0;
-                const regRate = payRates.regular || DEFAULT_RATES.regular;
-                const otRate = payRates.overtime || DEFAULT_RATES.overtime;
-                const specialRate = payRates.specialHoliday || DEFAULT_RATES.specialHoliday;
-                const legalRate = payRates.legalHoliday || DEFAULT_RATES.legalHoliday;
-
-                if (log.status === 'Present') {
-                    pay += (log.regularHours || 0) * regRate;
-                    pay += (log.overtimeHours || 0) * otRate;
-                } else if (log.status === 'Special Holiday (130%)') {
-                    pay += hours * specialRate;
-                } else if (log.status === 'Legal Holiday (200%)') {
-                    pay += hours * legalRate;
-                } else if (log.status === 'Legal/Special Holiday Non-Work') {
-                    // Paid basic for 8 hours (standard practice for non-worked paid holidays)
-                    pay += PAID_HOLIDAY_HOURS_EQUIVALENT * regRate;
-                }
-
-                return pay;
-            };
-
             // UTILITY: Get today's date string
             const getTodayString = () => new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
@@ -497,10 +492,87 @@
                  }
 
                  const durationMs = endDateTime.getTime() - startDateTime.getTime();
-                 // Return 0 if duration is negative (safety check)
                  return Math.max(0, durationMs / (1000 * 60 * 60)); 
             };
             
+            /**
+             * UTILITY: Calculates hours worked between 22:00 (10 PM) and 06:00 (6 AM)
+             */
+            const calculateNightHours = (dateIn, timeIn, timeOut) => {
+                const startDateTime = new Date(`${dateIn}T${timeIn}:00`);
+                let endDateTime = new Date(`${dateIn}T${timeOut}:00`);
+                
+                // Handle overnight shift assumption
+                if (endDateTime.getTime() <= startDateTime.getTime()) {
+                   endDateTime.setDate(endDateTime.getDate() + 1);
+                }
+
+                if (endDateTime.getTime() <= startDateTime.getTime()) return 0;
+
+                let nightMinutes = 0;
+                let t = new Date(startDateTime.getTime());
+                const oneMinute = 60 * 1000;
+                
+                const actualEndTime = endDateTime.getTime(); 
+
+                while (t.getTime() < actualEndTime) {
+                    const currentHour = t.getHours(); 
+                    
+                    // Check if the current time falls between 22 (10 PM) and 5 (5 AM) inclusive, covering 22:00 to 05:59:59
+                    if (currentHour >= 22 || currentHour < 6) {
+                        nightMinutes++;
+                    }
+                    
+                    t = new Date(t.getTime() + oneMinute);
+                    
+                    // Safety break
+                    if (t.getTime() > actualEndTime + oneMinute) break; 
+                }
+
+                return nightMinutes / 60; // Return total hours
+            };
+
+
+            /**
+             * Calculates the estimated gross pay for a single log entry.
+             * Also calculates Night Differential Pay if applicable.
+             */
+            const calculateTotalPay = (log) => {
+                let basePay = 0;
+                let nightDifferentialPay = 0;
+                const hours = log.totalHours || 0;
+                const regRate = payRates.regular || DEFAULT_RATES.regular;
+                const otRate = payRates.overtime || DEFAULT_RATES.overtime;
+                const specialRate = payRates.specialHoliday || DEFAULT_RATES.specialHoliday;
+                const legalRate = payRates.legalHoliday || DEFAULT_RATES.legalHoliday;
+                const ndHourlyRate = payRates.nightDifferential || DEFAULT_RATES.nightDifferential; // Get the flat hourly rate
+
+                if (log.status === 'Present') {
+                    basePay += (log.regularHours || 0) * regRate;
+                    basePay += (log.overtimeHours || 0) * otRate;
+                } else if (log.status === 'Special Holiday (130%)') {
+                    basePay += hours * specialRate;
+                } else if (log.status === 'Legal Holiday (200%)') {
+                    basePay += hours * legalRate;
+                } else if (log.status === 'Legal/Special Holiday Non-Work') {
+                    // Paid basic for 8 hours
+                    basePay += PAID_HOLIDAY_HOURS_EQUIVALENT * regRate;
+                }
+                
+                // --- NIGHT DIFFERENTIAL CALCULATION ---
+                if (hours > 0) {
+                    const ndHours = log.nightDifferentialHours || 0;
+                    
+                    // ND is now calculated as: ND Hours * Flat Hourly ND Rate
+                    nightDifferentialPay = ndHours * ndHourlyRate; 
+                }
+
+                log.nightDifferentialPay = nightDifferentialPay;
+                log.basePay = basePay;
+                
+                return basePay + nightDifferentialPay;
+            };
+
             // UTILITY: Convert total hours (number) to Hh Mm string
             const formatHours = (hours) => {
               if (hours === null || isNaN(hours)) return '0h 00m';
@@ -529,7 +601,7 @@
                 let startTime = elements.startTimeInput.value;
                 let endTime = elements.endTimeInput.value;
                 
-                let totalHours = 0, regularHours = 0, overtimeHours = 0;
+                let totalHours = 0, regularHours = 0, overtimeHours = 0, nightDifferentialHours = 0;
 
                 // Only these statuses trigger time calculations
                 const isWorkEntry = ['Present', 'Legal Holiday (200%)', 'Special Holiday (130%)'].includes(status);
@@ -538,6 +610,7 @@
                     totalHours = calculateTotalHours(date, startTime, endTime);
                     regularHours = Math.min(totalHours, 8);
                     overtimeHours = Math.max(0, totalHours - 8);
+                    nightDifferentialHours = calculateNightHours(date, startTime, endTime);
 
                     if (totalHours <= 0) {
                         showConfirmModal('Invalid Shift', 'Clock Out time must be after Clock In time (handling for overnight shifts is included). Please check your times.', 'Close', null, true); 
@@ -545,13 +618,13 @@
                     }
 
                 } else {
-                    // For "Non-Work Day" and "Legal/Special Holiday Non-Work"
+                    // For non-work days
                     startTime = '00:00';
                     endTime = '00:00';
                 }
 
                 const newLog = { 
-                    id: Date.now(), // Unique ID using timestamp
+                    id: Date.now(), 
                     date: date, 
                     status: status, 
                     timeIn: startTime,
@@ -560,20 +633,24 @@
                     totalHours: totalHours,
                     regularHours: regularHours,
                     overtimeHours: overtimeHours,
+                    nightDifferentialHours: nightDifferentialHours, 
                 };
+                
+                // Calculate pay and inject it into the object for display/export consistency
+                calculateTotalPay(newLog); 
 
                 allLogs.push(newLog);
                 saveLogs();
                 
                 elements.logForm.reset();
-                elements.statusInput.value = 'Present'; // Reset status to default
+                elements.statusInput.value = 'Present'; 
                 elements.startTimeInput.value = '06:00';
                 elements.endTimeInput.value = '14:00';
-                elements.dateInput.value = getTodayString(); // Reset date to today
+                elements.dateInput.value = getTodayString(); 
                 
                 handleStatusChange(elements.statusInput.value, elements.presentDetails, elements.startTimeInput, elements.endTimeInput);
                 populateYearFilter(elements.yearFilter);
-                applyFilter(); // Triggers updateFilteredSummaries and days count
+                applyFilter(); 
             });
 
             // --- Status Change UI Toggler ---
@@ -605,34 +682,41 @@
                 let totalSpecialHolPay = 0; 
                 let totalLegalHolPay = 0; 
                 let totalNonWorkedPaidHolPay = 0; 
+                let totalNightDifferentialPay = 0; 
                 
                 let totalDayHours = 0;
                 let totalMidHours = 0;
                 let totalNightHours = 0;
                 let totalSpecialHolHours = 0;
                 let totalLegalHolHours = 0;
-                let totalOvertimeHours = 0;
+                let totalOvertimeHours = 0; 
                 let grandTotalWorkedHours = 0;
                 
                 // Summarize ONLY the provided logs
                 logs.forEach(log => {
-                    const logPay = calculateTotalPay(log);
+                    // Re-calculate pay to ensure it uses the latest rates
+                    calculateTotalPay(log); 
+                    
                     const hours = log.totalHours || 0;
 
                     // 1. Pay Classification
+                    // These are based on the basePay property, excluding ND
                     if (log.status === 'Present') {
-                        totalRegularOTPay += logPay;
+                        totalRegularOTPay += log.basePay;
                     } else if (log.status === 'Special Holiday (130%)') {
-                        totalSpecialHolPay += logPay;
+                        totalSpecialHolPay += log.basePay;
                     } else if (log.status === 'Legal Holiday (200%)') {
-                        totalLegalHolPay += logPay;
+                        totalLegalHolPay += log.basePay;
                     } else if (log.status === 'Legal/Special Holiday Non-Work') {
-                        totalNonWorkedPaidHolPay += logPay;
+                        totalNonWorkedPaidHolPay += log.basePay;
                     }
+                    
+                    // Add ND Pay separately (if applicable to this log)
+                    totalNightDifferentialPay += log.nightDifferentialPay || 0;
                     
                     // 2. Hours Classification (Only for worked logs)
                     if (log.status === 'Present') {
-                        const timeIn = log.timeIn; // e.g., '06:00'
+                        const timeIn = log.timeIn; 
                         
                         // Convert time string to minutes past midnight
                         const [h, m] = timeIn.split(':').map(Number);
@@ -652,9 +736,7 @@
                             totalNightHours += hours;
                         }
                         
-                        // Capture pure overtime for the new metric
                         totalOvertimeHours += log.overtimeHours || 0;
-
                         grandTotalWorkedHours += hours;
 
                     } else if (log.status === 'Special Holiday (130%)') {
@@ -667,13 +749,14 @@
                 });
                 
                 // Calculate grand total pay
-                const totalPay = totalRegularOTPay + totalSpecialHolPay + totalLegalHolPay + totalNonWorkedPaidHolPay;
+                const totalPay = totalRegularOTPay + totalSpecialHolPay + totalLegalHolPay + totalNonWorkedPaidHolPay + totalNightDifferentialPay;
 
                 // Update Pay UI elements
                 elements.summaryRegularOTPay.textContent = `₱${totalRegularOTPay.toFixed(2)}`;
                 elements.summarySpecialHolPay.textContent = `₱${totalSpecialHolPay.toFixed(2)}`;
                 elements.summaryLegalHolPay.textContent = `₱${totalLegalHolPay.toFixed(2)}`;
                 elements.summaryNonWorkedPaidHolPay.textContent = `₱${totalNonWorkedPaidHolPay.toFixed(2)}`;
+                elements.summaryNightDifferentialPay.textContent = `₱${totalNightDifferentialPay.toFixed(2)}`; 
                 elements.summaryTotalPay.textContent = `₱${totalPay.toFixed(2)}`;
 
                 // Update Hours UI elements
@@ -750,10 +833,18 @@
                     // Check if it's a day where time was recorded/paid
                     const isWorkEntry = ['Present', 'Legal Holiday (200%)', 'Special Holiday (130%)'].includes(log.status) && log.totalHours > 0;
                     
+                    // Recalculate pay here to ensure all properties (basePay, nightDifferentialPay) are current
+                    calculateTotalPay(log); 
+                    const totalPay = log.basePay + log.nightDifferentialPay;
+
                     if (isWorkEntry) {
                         const breakdown = `(${formatHours(log.regularHours)} Reg, ${formatHours(log.overtimeHours)} OT)`;
                         const totalHours = log.totalHours || 0;
-                        const totalPay = calculateTotalPay(log);
+                        
+                        let ndTag = '';
+                        if (log.nightDifferentialHours > 0) {
+                            ndTag = `<span class="text-xs font-semibold text-blue-300 ml-2">(${formatHours(log.nightDifferentialHours)} ND Hrs)</span>`;
+                        }
                         
                         // Icon based on status
                         let statusIcon = '';
@@ -766,11 +857,11 @@
                                             <span class="text-sm text-gray-400">${log.timeIn} - ${log.timeOut}</span>
                                             <span class="text-lg text-green-400 font-semibold">${statusIcon}${formatHours(totalHours)}</span>
                                             <span class="text-xs text-gray-500">${breakdown}</span>
+                                            ${ndTag}
                                         </div>
                                         <p class="text-sm text-indigo-400 font-medium mt-2">₱${totalPay.toFixed(2)} Estimated Gross Pay</p>`;
                     } else if (log.status === 'Legal/Special Holiday Non-Work') {
                         // Display 8 hours equivalent pay for non-worked holiday
-                        const totalPay = calculateTotalPay(log);
                         detailsHtml = `<div class="flex items-center flex-wrap gap-x-3 gap-y-1">
                                             ${getStatusBadge(log.status)}
                                             <span class="text-sm text-gray-400">Paid Day Off Equivalent</span>
@@ -845,8 +936,8 @@
                 elements.logHistoryTitle.textContent = `Log History for ${monthName} ${selectedYear}`;
                 
                 renderLogs(filteredLogs);
-                updateDaysCountSummary(filteredLogs); // <-- Days count based on selected month
-                updateFilteredSummaries(filteredLogs); // <-- Hours and Pay based on selected month
+                updateDaysCountSummary(filteredLogs); 
+                updateFilteredSummaries(filteredLogs); 
             };
 
             // --- Export Functionality ---
@@ -860,37 +951,47 @@
 
                 // Define CSV headers
                 const headers = [
-                    "Date", "Status", "Clock In", "Clock Out", "Total Hours (Decimal)", "Regular Hours (Decimal)", 
-                    "Overtime Hours (Decimal)", "Regular Rate (Per Hour)", "Overtime Rate (Per Hour)",
-                    "Holiday Rate (Per Hour)", "Estimated Gross Pay (PHP)", "Notes"
+                    "Date", "Status", "Clock In", "Clock Out", 
+                    "Total Hours (Decimal)", "Regular Hours (Decimal)", "Overtime Hours (Decimal)",
+                    "Night Differential Hours (Decimal)", 
+                    "Regular Rate (Per Hour)", "Overtime Rate (Per Hour)", "Holiday Rate (Per Hour)",
+                    "Night Differential Hourly Rate (PHP)", // UPDATED HEADER
+                    "Estimated Gross Pay (PHP)", "Notes"
                 ];
 
                 const csvRows = logsToExport.map(log => {
-                    const totalPay = calculateTotalPay(log);
+                    // Ensure pay is calculated with current rates before export
+                    calculateTotalPay(log); 
+
                     const regRate = payRates.regular || DEFAULT_RATES.regular;
                     const otRate = payRates.overtime || DEFAULT_RATES.overtime;
-                    const specialRate = payRates.specialHoliday || DEFAULT_RATES.specialHoliday;
-                    const legalRate = payRates.legalHoliday || DEFAULT_RATES.legalHoliday;
-                    
+                    const ndHourlyRate = payRates.nightDifferential || DEFAULT_RATES.nightDifferential; // Get flat ND rate
+                    const totalPay = log.basePay + log.nightDifferentialPay;
+
                     let holidayRate = 0;
-                    if (log.status === 'Special Holiday (130%)') holidayRate = specialRate;
-                    else if (log.status === 'Legal Holiday (200%)') holidayRate = legalRate;
+                    if (log.status === 'Special Holiday (130%)') holidayRate = payRates.specialHoliday || DEFAULT_RATES.specialHoliday;
+                    else if (log.status === 'Legal Holiday (200%)') holidayRate = payRates.legalHoliday || DEFAULT_RATES.legalHoliday;
 
                     // Helper to escape double quotes and enclose values in double quotes for proper CSV handling
                     const escape = (value) => `"${String(value).replace(/"/g, '""')}"`;
+
+                    // Handle decimal hours for non-worked paid holidays
+                    const totalHoursDecimal = log.status === 'Legal/Special Holiday Non-Work' ? PAID_HOLIDAY_HOURS_EQUIVALENT.toFixed(2) : log.totalHours.toFixed(2);
+                    const ndHoursDecimal = log.nightDifferentialHours ? log.nightDifferentialHours.toFixed(2) : '0.00';
 
                     return [
                         escape(log.date),
                         escape(log.status),
                         escape(log.timeIn),
                         escape(log.timeOut),
-                        // Log 8 hours for non-worked paid holidays in the decimal hour columns
-                        escape(log.status === 'Legal/Special Holiday Non-Work' ? PAID_HOLIDAY_HOURS_EQUIVALENT.toFixed(2) : log.totalHours.toFixed(2)),
+                        escape(totalHoursDecimal),
                         escape(log.regularHours.toFixed(2)),
                         escape(log.overtimeHours.toFixed(2)),
+                        escape(ndHoursDecimal), 
                         escape(regRate.toFixed(2)),
                         escape(otRate.toFixed(2)),
                         escape(holidayRate.toFixed(2)),
+                        escape(ndHourlyRate.toFixed(2)), // Use the flat hourly rate
                         escape(totalPay.toFixed(2)),
                         escape(log.notes)
                     ].join(',');
@@ -934,7 +1035,7 @@
                         allLogs = allLogs.filter(log => log.id !== logId);
                         saveLogs();
                         populateYearFilter(elements.yearFilter);
-                        applyFilter(); // Triggers updateFilteredSummaries
+                        applyFilter(); 
                         closeConfirmModal();
                     };
                 }
@@ -971,13 +1072,14 @@
                 let newTimeIn = elements.editStartTime.value;
                 let newTimeOut = elements.editEndTime.value;
 
-                let totalHours = 0, regularHours = 0, overtimeHours = 0;
+                let totalHours = 0, regularHours = 0, overtimeHours = 0, nightDifferentialHours = 0;
                 const isWorkEntry = ['Present', 'Legal Holiday (200%)', 'Special Holiday (130%)'].includes(newStatus);
 
                 if (isWorkEntry) {
                     totalHours = calculateTotalHours(newDate, newTimeIn, newTimeOut);
                     regularHours = Math.min(totalHours, 8);
                     overtimeHours = Math.max(0, totalHours - 8);
+                    nightDifferentialHours = calculateNightHours(newDate, newTimeIn, newTimeOut);
 
                     if (totalHours <= 0) {
                          showConfirmModal('Invalid Shift', 'Clock Out time must be after Clock In time (handling for overnight shifts is included).', 'Close', null, true);
@@ -998,11 +1100,12 @@
                     totalHours: totalHours,
                     regularHours: regularHours,
                     overtimeHours: overtimeHours,
+                    nightDifferentialHours: nightDifferentialHours, 
                 };
                 
                 saveLogs();
-                populateYearFilter(elements.yearFilter); // Update year list in case date was changed to a new year
-                applyFilter(); // Triggers updateFilteredSummaries
+                populateYearFilter(elements.yearFilter); 
+                applyFilter(); 
                 closeEditModal();
             });
 
@@ -1046,6 +1149,7 @@
                 elements.rateOvertime.value = payRates.overtime;
                 elements.rateSpecialHoliday.value = payRates.specialHoliday;
                 elements.rateLegalHoliday.value = payRates.legalHoliday;
+                elements.rateNightDifferential.value = payRates.nightDifferential; 
                 elements.ratesSettingsModalBackdrop.style.display = 'flex';
             });
             
@@ -1062,11 +1166,12 @@
                     overtime: parseFloat(elements.rateOvertime.value) || DEFAULT_RATES.overtime,
                     specialHoliday: parseFloat(elements.rateSpecialHoliday.value) || DEFAULT_RATES.specialHoliday,
                     legalHoliday: parseFloat(elements.rateLegalHoliday.value) || DEFAULT_RATES.legalHoliday,
+                    nightDifferential: parseFloat(elements.rateNightDifferential.value) || DEFAULT_RATES.nightDifferential, 
                 };
                 saveRates();
                 elements.ratesSettingsModalBackdrop.style.display = 'none';
                 
-                applyFilter(); // Important: Re-render logs and re-calculate summaries with new rates
+                applyFilter(); 
                 showConfirmModal('Rates Saved', 'Your new hourly pay rates have been saved successfully.', 'OK', null, true);
             });
 
@@ -1134,7 +1239,7 @@
                         allLogs = [];
                         saveLogs();
                         populateYearFilter(elements.yearFilter);
-                        applyFilter(); // Triggers updateFilteredSummaries
+                        applyFilter(); 
                         elements.manageDataModalBackdrop.style.display = 'none';
                         showConfirmModal('Data Wiped', 'All log data has been permanently deleted.', 'OK', null, true);
                     }
@@ -1164,7 +1269,7 @@
                         });
                         saveLogs();
                         populateYearFilter(elements.yearFilter);
-                        applyFilter(); // Triggers updateFilteredSummaries
+                        applyFilter(); 
                         elements.manageDataModalBackdrop.style.display = 'none';
                         showConfirmModal('Month Deleted', `${originalLength - allLogs.length} entries for ${monthName} ${year} have been deleted.`, 'OK', null, true);
                     }
