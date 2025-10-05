@@ -1,0 +1,1203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Work Monitoring Dashboard</title>
+
+    <!-- PWA Manifest Link - Placeholder -->
+    <link rel="manifest" href="manifest.json">
+    <!-- Theme color for browser UI -->
+    <meta name="theme-color" content="#111827">
+    
+    <!-- Apple-specific meta tags for PWA -->
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/34d399/ffffff?text=✔️">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Work Monitor">
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Custom Styles for aesthetics and animations */
+        body { font-family: 'Inter', sans-serif; }
+        .new-entry { animation: fadeIn 0.5s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .summary-box { 
+            display: flex; flex-direction: column; justify-content: center; min-height: 90px; text-align: center; 
+            border: 1px solid rgba(156, 163, 175, 0.1); /* Light border */
+        }
+        .modal-backdrop { 
+            background-color: rgba(0,0,0,0.8);
+            backdrop-filter: blur(5px); /* Added a slight blur for better modal focus */
+        }
+        /* Custom scrollbar for better look in dark mode */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: #1f2937; /* gray-800 */ }
+        ::-webkit-scrollbar-thumb { background: #4f46e5; /* indigo-600 */ border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #6366f1; /* indigo-500 */ }
+    </style>
+</head>
+<body class="bg-black text-gray-200">
+
+    <div class="container mx-auto max-w-2xl p-4 sm:p-6">
+        
+        <header class="text-center my-6">
+            <h1 class="text-4xl font-extrabold text-white tracking-tight">Work Monitoring Dashboard</h1>
+            <!-- UPDATED SUBTITLE -->
+            <p class="text-sm text-indigo-400 mt-2">by HenJr</p> 
+        </header>
+
+        <!-- MANUAL ENTRY FORM SECTION -->
+        <div class="bg-gray-900 rounded-2xl shadow-2xl p-6 mb-8 border border-indigo-700/50">
+            <h2 class="text-xl font-bold mb-4 text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" /></svg>
+                Add Log Entry
+            </h2>
+            <form id="log-form">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="date" class="block text-sm font-medium text-gray-300 mb-1">Date</label>
+                        <input type="date" id="date" name="date" required class="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-white transition duration-150">
+                    </div>
+                    <div>
+                        <label for="status" class="block text-sm font-medium text-gray-300 mb-1">Status</label>
+                        <select id="status" name="status" class="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-white transition duration-150">
+                            <option value="Present">Present (Regular Work Day)</option>
+                            <option value="Special Holiday (130%)">Special Holiday (130% Rate)</option>
+                            <option value="Legal Holiday (200%)">Legal Holiday (200% Rate)</option>
+                            <option value="Non-Work Day">Non-Work Day (Leave/Rest/Non-Paid)</option>
+                            <option value="Legal/Special Holiday Non-Work">Legal/Special Holiday Non-Work</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- SHIFT PRESETS (Updated to include OT shifts) -->
+                <div id="shift-presets" class="mt-4 flex flex-wrap gap-2">
+                    <!-- Standard Shifts -->
+                    <button type="button" data-start="06:00" data-end="14:00" class="flex-1 min-w-[30%] sm:min-w-0 bg-green-700/50 text-green-300 font-medium py-2 rounded-xl text-sm hover:bg-green-700 transition duration-150 transform hover:scale-[1.02] active:scale-[0.98]">Day (06:00-14:00)</button>
+                    <button type="button" data-start="14:00" data-end="22:00" class="flex-1 min-w-[30%] sm:min-w-0 bg-orange-700/50 text-orange-300 font-medium py-2 rounded-xl text-sm hover:bg-orange-700 transition duration-150 transform hover:scale-[1.02] active:scale-[0.98]">Mid (14:00-22:00)</button>
+                    <button type="button" data-start="22:00" data-end="06:00" class="flex-1 min-w-[30%] sm:min-w-0 bg-blue-700/50 text-blue-300 font-medium py-2 rounded-xl text-sm hover:bg-blue-700 transition duration-150 transform hover:scale-[1.02] active:scale-[0.98]">Night (22:00-06:00)</button>
+                    
+                    <!-- New OT Shifts -->
+                    <button type="button" data-start="06:00" data-end="18:00" class="flex-1 min-w-[45%] sm:min-w-0 bg-red-700/50 text-red-300 font-medium py-2 rounded-xl text-sm hover:bg-red-700 transition duration-150 transform hover:scale-[1.02] active:scale-[0.98]">Day OT (06:00-18:00)</button>
+                    <button type="button" data-start="18:00" data-end="06:00" class="flex-1 min-w-[45%] sm:min-w-0 bg-pink-700/50 text-pink-300 font-medium py-2 rounded-xl text-sm hover:bg-pink-700 transition duration-150 transform hover:scale-[1.02] active:scale-[0.98]">Night OT (18:00-06:00)</button>
+                </div>
+
+                <div id="present-details" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="start-time" class="block text-sm font-medium text-gray-300 mb-1">Clock In Time</label>
+                        <input type="time" id="start-time" name="start-time" value="06:00" required class="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-white transition duration-150">
+                    </div>
+                    <div>
+                        <label for="end-time" class="block text-sm font-medium text-gray-300 mb-1">Clock Out Time</label>
+                        <input type="time" id="end-time" name="end-time" value="14:00" required class="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-white transition duration-150">
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    <label for="notes" class="block text-sm font-medium text-gray-300 mb-1">Notes (Optional)</label>
+                    <textarea id="notes" name="notes" rows="2" class="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-white transition duration-150" placeholder="e.g., Worked on project X or reason for leave/holiday..."></textarea>
+                </div>
+
+                <div class="mt-6">
+                    <button type="submit" class="w-full bg-indigo-600 text-white font-semibold py-3 px-4 rounded-xl shadow-lg hover:bg-indigo-700 focus:outline-none focus:ring-4 focus:ring-offset-2 focus:ring-indigo-500 focus:ring-offset-gray-900 transition-all duration-300 transform hover:scale-[1.01] active:scale-[0.99]">
+                        <span class="flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2m-9 0a2 2 0 002 2h4a2 2 0 002-2m-4 6h4m-4 4h4"></path></svg>
+                            Add Log Entry
+                        </span>
+                    </button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- SETTINGS SECTION -->
+        <div class="bg-gray-900 rounded-2xl shadow-2xl p-6 mb-8 border border-gray-700">
+            <h2 class="text-xl font-bold mb-4 text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.942 3.313.823 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.942 1.543-.823 3.313-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.942-3.313-.823-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.942-1.543.823-3.313 2.37-2.37a1.724 1.724 0 002.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                Settings & Data Management
+            </h2>
+            <div class="grid grid-cols-2 gap-3">
+                 <button id="pay-rate-btn" class="bg-purple-600 text-white font-medium py-3 px-4 rounded-xl shadow-md hover:bg-purple-700 transition duration-150 transform hover:scale-[1.02] active:scale-[0.98]">Pay Rate Settings</button>
+                 <button id="manage-data-btn" class="bg-gray-600 text-white font-medium py-3 px-4 rounded-xl shadow-md hover:bg-gray-500 transition duration-150 transform hover:scale-[1.02] active:scale-[0.98]">Manage Log Data</button>
+            </div>
+        </div>
+        <!-- END SETTINGS SECTION -->
+
+
+        <!-- SUMMARY SECTION -->
+        <div class="bg-gray-900 rounded-2xl shadow-2xl p-6 mb-8 border border-gray-700">
+            <h2 class="text-xl font-bold mb-4 text-white flex items-center gap-2">
+                 <svg class="w-6 h-6 text-yellow-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2m2 4h10a2 2 0 002-2v-6a2 2 0 00-2-2H9a2 2 0 00-2 2v6a2 2 0 002 2z"></path></svg>
+                Pay Breakdown (Selected Month)
+            </h2>
+             <!-- PAY BREAKDOWN METRICS -->
+             <div class="grid grid-cols-2 sm:grid-cols-2 gap-3 mb-4">
+                 <div class="summary-box bg-gray-800 p-3 rounded-xl">
+                     <p class="text-xs font-semibold text-green-400">Total Reg & OT Pay</p>
+                     <p id="summary-regular-ot-pay" class="text-xl font-bold text-green-300 mt-1">₱0.00</p>
+                 </div>
+                 <div class="summary-box bg-gray-800 p-3 rounded-xl">
+                     <p class="text-xs font-semibold text-yellow-400">Special Hol. (130%) Pay</p>
+                     <p id="summary-special-hol-pay" class="text-xl font-bold text-yellow-300 mt-1">₱0.00</p>
+                 </div>
+                 <div class="summary-box bg-gray-800 p-3 rounded-xl">
+                     <p class="text-xs font-semibold text-red-400">Legal Hol. (200%) Pay</p>
+                     <p id="summary-legal-hol-pay" class="text-xl font-bold text-red-300 mt-1">₱0.00</p>
+                 </div>
+                 <div class="summary-box bg-gray-800 p-3 rounded-xl">
+                     <p class="text-xs font-semibold text-indigo-400">Non-Worked Paid Hol. Pay</p>
+                     <p id="summary-non-worked-paid-hol-pay" class="text-xl font-bold text-indigo-300 mt-1">₱0.00</p>
+                 </div>
+             </div>
+            <!-- Total Pay Box -->
+             <div class="grid grid-cols-1">
+                <div class="summary-box bg-indigo-900/50 p-3 rounded-xl border border-indigo-700/50">
+                    <p class="text-xs font-semibold text-indigo-300">Total Estimated Gross Pay (Selected Month)</p>
+                    <p id="summary-total-pay" class="text-3xl font-extrabold text-indigo-200 mt-1">₱0.00</p>
+                </div>
+            </div>
+
+            <!-- SHIFT HOURS SUMMARY -->
+            <h3 class="text-lg font-bold mb-3 mt-6 text-gray-300 border-t border-gray-700 pt-4">Hours Summary (Selected Month)</h3>
+            <div id="overall-hours-summary-container" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                <div class="summary-box bg-gray-800 p-3 rounded-xl"><p class="text-xs font-semibold text-green-400">Day Shift Hours</p><p id="summary-day-hours" class="text-xl font-bold text-green-300 mt-1">0h 00m</p></div>
+                <div class="summary-box bg-gray-800 p-3 rounded-xl"><p class="text-xs font-semibold text-orange-400">Mid Shift Hours</p><p id="summary-mid-hours" class="text-xl font-bold text-orange-300 mt-1">0h 00m</p></div>
+                <div class="summary-box bg-gray-800 p-3 rounded-xl"><p class="text-xs font-semibold text-blue-400">Night Shift Hours</p><p id="summary-night-hours" class="text-xl font-bold text-blue-300 mt-1">0h 00m</p></div>
+                
+                <div class="summary-box bg-gray-800 p-3 rounded-xl"><p class="text-xs font-semibold text-yellow-400">Special Hol. Hours</p><p id="summary-special-hol-hours-total" class="text-xl font-bold text-yellow-300 mt-1">0h 00m</p></div>
+                <div class="summary-box bg-gray-800 p-3 rounded-xl"><p class="text-xs font-semibold text-red-400">Legal Hol. Hours</p><p id="summary-legal-hol-hours-total" class="text-xl font-bold text-red-300 mt-1">0h 00m</p></div>
+                <div class="summary-box bg-gray-800 p-3 rounded-xl">
+                    <p class="text-xs font-semibold text-pink-400">Total Overtime Hours</p>
+                    <p id="summary-total-overtime-hours" class="text-xl font-bold text-pink-300 mt-1">0h 00m</p>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 mt-3">
+                 <div class="summary-box bg-gray-800 p-3 rounded-xl border-t border-cyan-700">
+                     <p class="text-xs font-semibold text-cyan-400">Grand Total Worked Hours</p>
+                     <p id="summary-total-worked-hours" class="text-2xl font-bold text-cyan-300 mt-1">0h 00m</p>
+                 </div>
+            </div>
+            <!-- END SHIFT HOURS SUMMARY -->
+
+            <h3 class="text-lg font-bold mb-3 mt-6 border-t border-gray-700 pt-4 text-gray-300">Days Count (Selected Month)</h3>
+            <div id="summary-days-container" class="grid grid-cols-2 sm:grid-cols-4 gap-3"></div>
+        </div>
+        <!-- END SUMMARY SECTION -->
+        
+        <!-- FILTER SECTION -->
+        <div class="bg-gray-900 rounded-2xl shadow-2xl p-6 mb-6 border border-gray-700">
+            <h2 class="text-xl font-bold mb-4 text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-blue-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707v7l-4 4v-7a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
+                View History Filter & Export
+            </h2>
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label for="month-filter" class="block text-sm font-medium text-gray-300 mb-1">Month</label>
+                        <select id="month-filter" class="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg text-white transition duration-150">
+                            <option value="0">January</option><option value="1">February</option><option value="2">March</option>
+                            <option value="3">April</option><option value="4">May</option><option value="5">June</option>
+                            <option value="6">July</option><option value="7">August</option><option value="8">September</option>
+                            <option value="9">October</option><option value="10">November</option><option value="11">December</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="year-filter" class="block text-sm font-medium text-gray-300 mb-1">Year</label>
+                        <select id="year-filter" class="w-full p-2 bg-gray-800 border border-gray-600 rounded-lg text-white transition duration-150"></select>
+                    </div>
+                </div>
+                <div class="flex flex-col gap-2 self-end">
+                    <button id="apply-filter-btn" class="w-full bg-blue-600 text-white font-medium py-3 px-4 rounded-xl shadow-md hover:bg-blue-700 transition duration-150 transform hover:scale-[1.01] active:scale-[0.99]">View Selected Month</button>
+                    <!-- EXPORT BUTTON -->
+                    <button id="export-csv-btn" class="w-full bg-green-600 text-white font-medium py-3 px-4 rounded-xl shadow-md hover:bg-green-700 transition duration-150 transform hover:scale-[1.01] active:scale-[0.99]">
+                        <span class="flex items-center justify-center">
+                            <svg class="w-5 h-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+                            Export to CSV
+                        </span>
+                    </button>
+                </div>
+            </div>
+        </div>
+        <!-- END FILTER SECTION -->
+
+        <!-- LOG HISTORY LIST -->
+        <div>
+            <div class="flex justify-between items-center mb-4">
+                 <h2 id="log-history-title" class="text-2xl font-bold text-white">Recent Log History</h2>
+            </div>
+            <div id="log-container" class="space-y-3">
+                <p id="empty-log-message" class="text-gray-400 text-center py-8 bg-gray-900 rounded-xl border border-gray-700 shadow-inner">No entries yet. Add one above to get started!</p>
+            </div>
+        </div>
+        <!-- END LOG HISTORY LIST -->
+    </div>
+    
+    <!-- Confirmation Modal -->
+    <div id="confirm-modal-backdrop" class="fixed inset-0 hidden items-center justify-center z-50 modal-backdrop">
+        <div id="confirm-modal" class="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 w-11/12 max-w-lg mx-auto transform transition duration-300 scale-100">
+            <h3 id="confirm-modal-title" class="text-xl font-bold mb-4 text-white"></h3>
+            <p id="confirm-modal-text" class="text-sm text-gray-400 mb-2"></p>
+            <div class="mt-6 flex justify-end gap-3">
+                <button type="button" id="confirm-modal-cancel" class="bg-gray-600 text-gray-200 font-medium py-2 px-4 rounded-lg hover:bg-gray-500 transition duration-150">Cancel</button>
+                <button type="button" id="confirm-modal-action" class="bg-red-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-red-700 transition duration-150"></button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div id="edit-modal-backdrop" class="fixed inset-0 hidden items-center justify-center z-50 modal-backdrop">
+        <div id="edit-modal" class="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 w-11/12 max-w-lg mx-auto transform transition duration-300 scale-100">
+            <h3 class="text-xl font-bold mb-6 text-white">Edit Log Entry</h3>
+            <form id="edit-form">
+                <input type="hidden" id="edit-log-id">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="edit-date" class="block text-sm font-medium text-gray-300 mb-1">Date</label>
+                        <input type="date" id="edit-date" required class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white transition duration-150">
+                    </div>
+                    <div>
+                        <label for="edit-status" class="block text-sm font-medium text-gray-300 mb-1">Status</label>
+                        <select id="edit-status" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white transition duration-150">
+                            <option value="Present">Present (Work Day)</option>
+                            <option value="Special Holiday (130%)">Special Holiday (130%)</option>
+                            <option value="Legal Holiday (200%)">Legal Holiday (200%)</option>
+                            <option value="Non-Work Day">Non-Work Day (Holiday/Rest/Leave)</option>
+                            <option value="Legal/Special Holiday Non-Work">Legal/Special Holiday Non-Work</option>
+                        </select>
+                    </div>
+                </div>
+                 <div id="edit-present-details" class="mt-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="edit-start-time" class="block text-sm font-medium text-gray-300 mb-1">Clock In Time</label>
+                        <input type="time" id="edit-start-time" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white transition duration-150">
+                    </div>
+                    <div>
+                        <label for="edit-end-time" class="block text-sm font-medium text-gray-300 mb-1">Clock Out Time</label>
+                        <input type="time" id="edit-end-time" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white transition duration-150">
+                    </div>
+                </div>
+                <div class="mt-4">
+                    <label for="edit-notes" class="block text-sm font-medium text-gray-300 mb-1">Notes</label>
+                    <textarea id="edit-notes" rows="3" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white transition duration-150"></textarea>
+                </div>
+                <div class="mt-6 flex justify-end gap-3">
+                    <button type="button" id="edit-modal-cancel" class="bg-gray-600 text-gray-200 font-medium py-2 px-4 rounded-lg hover:bg-gray-500 transition duration-150">Cancel</button>
+                    <button type="submit" class="bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-150">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- PAY RATE SETTINGS MODAL -->
+    <div id="rates-settings-modal-backdrop" class="fixed inset-0 hidden items-center justify-center z-50 modal-backdrop">
+        <div id="rates-settings-modal" class="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 w-11/12 max-w-lg mx-auto transform transition duration-300 scale-100">
+            <h3 class="text-xl font-bold mb-6 text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-purple-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8V4m0 12v-4m-6 4h12a2 2 0 002-2V7a2 2 0 00-2-2H6a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                Pay Rate Settings (Hourly)
+            </h3>
+            <form id="rates-form" class="space-y-4">
+                <div>
+                    <label for="rate-regular" class="block text-sm font-medium text-gray-300 mb-1">Regular Hourly Rate (₱)</label>
+                    <input type="number" step="0.01" min="0" id="rate-regular" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500 transition duration-150" placeholder="e.g., 25.00">
+                </div>
+                <div>
+                    <label for="rate-overtime" class="block text-sm font-medium text-gray-300 mb-1">Overtime Hourly Rate (₱)</label>
+                    <input type="number" step="0.01" min="0" id="rate-overtime" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500 transition duration-150" placeholder="e.g., 31.25">
+                    <p class="text-xs text-gray-400 mt-1">1.25x or your custom OT rate.</p>
+                </div>
+                <div>
+                    <label for="rate-special-holiday" class="block text-sm font-medium text-gray-300 mb-1">Special Holiday Hourly Rate (₱)</label>
+                    <input type="number" step="0.01" min="0" id="rate-special-holiday" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500 transition duration-150" placeholder="e.g., 32.50">
+                    <p class="text-xs text-gray-400 mt-1">1.30x or your custom Special Holiday rate.</p>
+                </div>
+                <div>
+                    <label for="rate-legal-holiday" class="block text-sm font-medium text-gray-300 mb-1">Legal Holiday Hourly Rate (₱)</label>
+                    <input type="number" step="0.01" min="0" id="rate-legal-holiday" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500 transition duration-150" placeholder="e.g., 50.00">
+                    <p class="text-xs text-gray-400 mt-1">2.00x or your custom Legal Holiday rate.</p>
+                </div>
+                <div class="pt-4 flex justify-end">
+                    <button type="submit" class="bg-indigo-600 text-white font-medium py-2 px-4 rounded-lg hover:bg-indigo-700 transition duration-150">Save Rates</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    <!-- END PAY RATE SETTINGS MODAL -->
+
+
+    <!-- Data Management Modal -->
+    <div id="manage-data-modal-backdrop" class="fixed inset-0 hidden items-center justify-center z-50 modal-backdrop">
+        <div id="manage-data-modal" class="bg-gray-800 border border-gray-700 rounded-xl shadow-2xl p-6 w-11/12 max-w-lg mx-auto transform transition duration-300 scale-100">
+            <h3 class="text-xl font-bold mb-6 text-white flex items-center gap-2">
+                <svg class="w-6 h-6 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                Data Management
+            </h3>
+            
+            <div class="space-y-6">
+                <!-- Delete by Month -->
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-200 mb-3">Delete a Specific Month's Data</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <select id="delete-month-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
+                        <select id="delete-year-select" class="w-full p-2 bg-gray-700 border border-gray-600 rounded-lg text-white"></select>
+                        <button id="delete-month-btn" class="w-full bg-red-700/80 text-white font-medium py-2 px-4 rounded-lg shadow-sm hover:bg-red-700 transition duration-150">Delete Month</button>
+                    </div>
+                </div>
+
+                <!-- Divider -->
+                <div class="relative"><div class="absolute inset-0 flex items-center"><div class="w-full border-t border-gray-600"></div></div><div class="relative flex justify-center text-sm"><span class="px-2 bg-gray-800 text-gray-400 rounded-full">DANGER ZONE</span></div></div>
+                
+                <!-- Delete All Data -->
+                <div>
+                    <h4 class="text-lg font-semibold text-gray-200 mb-3">Wipe All Log Data</h4>
+                    <button id="delete-all-btn" class="w-full bg-red-600 text-white font-medium py-3 px-4 rounded-lg shadow-md hover:bg-red-500 transition duration-150 transform hover:scale-[1.01] active:scale-[0.99]">Permanently Delete ALL Log Data</button>
+                </div>
+            </div>
+
+            <div class="mt-8 flex justify-end">
+                <button type="button" id="manage-data-close-btn" class="bg-gray-600 text-gray-200 font-medium py-2 px-4 rounded-lg hover:bg-gray-500 transition duration-150">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // --- Element Declarations ---
+            const elements = {
+                // Main form
+                logForm: document.getElementById('log-form'), dateInput: document.getElementById('date'),
+                statusInput: document.getElementById('status'), presentDetails: document.getElementById('present-details'),
+                startTimeInput: document.getElementById('start-time'), endTimeInput: document.getElementById('end-time'),
+                notesInput: document.getElementById('notes'), shiftPresets: document.getElementById('shift-presets'),
+                // Summaries (Pay Breakdown)
+                summaryRegularOTPay: document.getElementById('summary-regular-ot-pay'),
+                summarySpecialHolPay: document.getElementById('summary-special-hol-pay'),
+                summaryLegalHolPay: document.getElementById('summary-legal-hol-pay'),
+                summaryNonWorkedPaidHolPay: document.getElementById('summary-non-worked-paid-hol-pay'),
+                summaryTotalPay: document.getElementById('summary-total-pay'),
+                // Summaries (Hours Breakdown)
+                summaryDayHours: document.getElementById('summary-day-hours'),
+                summaryMidHours: document.getElementById('summary-mid-hours'),
+                summaryNightHours: document.getElementById('summary-night-hours'),
+                summarySpecialHolHoursTotal: document.getElementById('summary-special-hol-hours-total'),
+                summaryLegalHolHoursTotal: document.getElementById('summary-legal-hol-hours-total'),
+                summaryTotalOvertimeHours: document.getElementById('summary-total-overtime-hours'), 
+                summaryTotalWorkedHours: document.getElementById('summary-total-worked-hours'),
+                
+                summaryDaysContainer: document.getElementById('summary-days-container'),
+                // Data Management Buttons
+                manageDataBtn: document.getElementById('manage-data-btn'),
+                // Log display
+                logContainer: document.getElementById('log-container'), emptyLogMessage: document.getElementById('empty-log-message'),
+                logHistoryTitle: document.getElementById('log-history-title'),
+                // Filters
+                monthFilter: document.getElementById('month-filter'), yearFilter: document.getElementById('year-filter'),
+                applyFilterBtn: document.getElementById('apply-filter-btn'),
+                exportCsvBtn: document.getElementById('export-csv-btn'), 
+                // Modals
+                confirmModalBackdrop: document.getElementById('confirm-modal-backdrop'), confirmModalTitle: document.getElementById('confirm-modal-title'), confirmModalText: document.getElementById('confirm-modal-text'),
+                confirmModalCancel: document.getElementById('confirm-modal-cancel'), confirmModalAction: document.getElementById('confirm-modal-action'),
+                editModalBackdrop: document.getElementById('edit-modal-backdrop'), editForm: document.getElementById('edit-form'),
+                editLogId: document.getElementById('edit-log-id'), editDate: document.getElementById('edit-date'), editStartTime: document.getElementById('edit-start-time'), editEndTime: document.getElementById('edit-end-time'),
+                editStatus: document.getElementById('edit-status'), editNotes: document.getElementById('edit-notes'), editPresentDetails: document.getElementById('edit-present-details'),
+                editModalCancel: document.getElementById('edit-modal-cancel'),
+                // Rates Modal
+                payRateBtn: document.getElementById('pay-rate-btn'), ratesSettingsModalBackdrop: document.getElementById('rates-settings-modal-backdrop'),
+                ratesForm: document.getElementById('rates-form'), rateRegular: document.getElementById('rate-regular'), rateOvertime: document.getElementById('rate-overtime'),
+                rateSpecialHoliday: document.getElementById('rate-special-holiday'), rateLegalHoliday: document.getElementById('rate-legal-holiday'),
+                // Data Management Modal
+                manageDataModalBackdrop: document.getElementById('manage-data-modal-backdrop'),
+                deleteMonthSelect: document.getElementById('delete-month-select'), deleteYearSelect: document.getElementById('delete-year-select'),
+                deleteMonthBtn: document.getElementById('delete-month-btn'), deleteAllBtn: document.getElementById('delete-all-btn'),
+                manageDataCloseBtn: document.getElementById('manage-data-close-btn'),
+            };
+
+            let allLogs = []; 
+            const LOGS_STORAGE_KEY = 'workMonitoringAppLogs_v7_manual'; 
+            const RATES_STORAGE_KEY = 'workMonitoringAppRates_v1';
+            const PAID_HOLIDAY_HOURS_EQUIVALENT = 8; // Assumes 8 hours of basic pay for non-worked paid holidays
+            let payRates = {};
+
+            // --- Local Storage Utilities ---
+            const saveLogs = () => {
+                try { localStorage.setItem(LOGS_STORAGE_KEY, JSON.stringify(allLogs)); } 
+                catch (error) { console.error("Error saving logs:", error); }
+            };
+
+            const loadLogs = () => {
+                try {
+                    const savedLogs = localStorage.getItem(LOGS_STORAGE_KEY);
+                    allLogs = savedLogs ? JSON.parse(savedLogs) : [];
+                } catch (error) {
+                    console.error("Error loading logs:", error);
+                    allLogs = [];
+                }
+            };
+            
+            // --- Rate Management Utilities ---
+            const DEFAULT_RATES = {
+                regular: 25.00,
+                overtime: 31.25, // 1.25x
+                specialHoliday: 32.50, // 1.3x
+                legalHoliday: 50.00, // 2.0x
+            };
+
+            const loadRates = () => {
+                try {
+                    const savedRates = localStorage.getItem(RATES_STORAGE_KEY);
+                    payRates = savedRates ? JSON.parse(savedRates) : DEFAULT_RATES;
+                } catch (error) {
+                    console.error("Error loading rates:", error);
+                    payRates = DEFAULT_RATES;
+                }
+            };
+
+            const saveRates = () => {
+                try { localStorage.setItem(RATES_STORAGE_KEY, JSON.stringify(payRates)); } 
+                catch (error) { console.error("Error saving rates:", error); }
+            };
+            
+            /**
+             * Calculates the estimated gross pay for a single log entry.
+             */
+            const calculateTotalPay = (log) => {
+                let pay = 0;
+                const hours = log.totalHours || 0;
+                const regRate = payRates.regular || DEFAULT_RATES.regular;
+                const otRate = payRates.overtime || DEFAULT_RATES.overtime;
+                const specialRate = payRates.specialHoliday || DEFAULT_RATES.specialHoliday;
+                const legalRate = payRates.legalHoliday || DEFAULT_RATES.legalHoliday;
+
+                if (log.status === 'Present') {
+                    pay += (log.regularHours || 0) * regRate;
+                    pay += (log.overtimeHours || 0) * otRate;
+                } else if (log.status === 'Special Holiday (130%)') {
+                    pay += hours * specialRate;
+                } else if (log.status === 'Legal Holiday (200%)') {
+                    pay += hours * legalRate;
+                } else if (log.status === 'Legal/Special Holiday Non-Work') {
+                    // Paid basic for 8 hours (standard practice for non-worked paid holidays)
+                    pay += PAID_HOLIDAY_HOURS_EQUIVALENT * regRate;
+                }
+
+                return pay;
+            };
+
+            // UTILITY: Get today's date string
+            const getTodayString = () => new Date(new Date().getTime() - (new Date().getTimezoneOffset() * 60000)).toISOString().split('T')[0];
+
+            // UTILITY: Calculate total hours and handle overnight shifts
+            const calculateTotalHours = (dateIn, timeIn, timeOut) => {
+                 const startDateTime = new Date(`${dateIn}T${timeIn}:00`);
+                 let endDateTime = new Date(`${dateIn}T${timeOut}:00`);
+                 
+                 // Handle overnight shift assumption: if end time is before start time, assume it's the next day
+                 if (endDateTime.getTime() <= startDateTime.getTime()) {
+                    endDateTime.setDate(endDateTime.getDate() + 1);
+                 }
+
+                 const durationMs = endDateTime.getTime() - startDateTime.getTime();
+                 // Return 0 if duration is negative (safety check)
+                 return Math.max(0, durationMs / (1000 * 60 * 60)); 
+            };
+            
+            // UTILITY: Convert total hours (number) to Hh Mm string
+            const formatHours = (hours) => {
+              if (hours === null || isNaN(hours)) return '0h 00m';
+              const totalMinutes = Math.round(hours * 60);
+              const h = Math.floor(totalMinutes / 60);
+              const m = totalMinutes % 60;
+              return `${h}h ${String(m).padStart(2, '0')}m`;
+            };
+
+            // --- Shift Preset Handler ---
+            elements.shiftPresets.addEventListener('click', (e) => {
+                const button = e.target.closest('button');
+                if (button && button.dataset.start && button.dataset.end) {
+                    elements.startTimeInput.value = button.dataset.start;
+                    elements.endTimeInput.value = button.dataset.end;
+                }
+            });
+
+            // --- Form Submission Handler (Add Entry) ---
+            elements.logForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const date = elements.dateInput.value;
+                const status = elements.statusInput.value;
+                const notes = elements.notesInput.value.trim();
+                let startTime = elements.startTimeInput.value;
+                let endTime = elements.endTimeInput.value;
+                
+                let totalHours = 0, regularHours = 0, overtimeHours = 0;
+
+                // Only these statuses trigger time calculations
+                const isWorkEntry = ['Present', 'Legal Holiday (200%)', 'Special Holiday (130%)'].includes(status);
+
+                if (isWorkEntry) {
+                    totalHours = calculateTotalHours(date, startTime, endTime);
+                    regularHours = Math.min(totalHours, 8);
+                    overtimeHours = Math.max(0, totalHours - 8);
+
+                    if (totalHours <= 0) {
+                        showConfirmModal('Invalid Shift', 'Clock Out time must be after Clock In time (handling for overnight shifts is included). Please check your times.', 'Close', null, true); 
+                        return;
+                    }
+
+                } else {
+                    // For "Non-Work Day" and "Legal/Special Holiday Non-Work"
+                    startTime = '00:00';
+                    endTime = '00:00';
+                }
+
+                const newLog = { 
+                    id: Date.now(), // Unique ID using timestamp
+                    date: date, 
+                    status: status, 
+                    timeIn: startTime,
+                    timeOut: endTime,
+                    notes: notes,
+                    totalHours: totalHours,
+                    regularHours: regularHours,
+                    overtimeHours: overtimeHours,
+                };
+
+                allLogs.push(newLog);
+                saveLogs();
+                
+                elements.logForm.reset();
+                elements.statusInput.value = 'Present'; // Reset status to default
+                elements.startTimeInput.value = '06:00';
+                elements.endTimeInput.value = '14:00';
+                elements.dateInput.value = getTodayString(); // Reset date to today
+                
+                handleStatusChange(elements.statusInput.value, elements.presentDetails, elements.startTimeInput, elements.endTimeInput);
+                populateYearFilter(elements.yearFilter);
+                applyFilter(); // Triggers updateFilteredSummaries and days count
+            });
+
+            // --- Status Change UI Toggler ---
+            const handleStatusChange = (status, detailsEl, startEl, endEl) => {
+                // Time inputs are only relevant for paid/worked entries
+                const isWorkEntry = ['Present', 'Legal Holiday (200%)', 'Special Holiday (130%)'].includes(status);
+                
+                if(detailsEl && elements.shiftPresets) {
+                    detailsEl.style.display = isWorkEntry ? 'grid' : 'none';
+                    elements.shiftPresets.style.display = isWorkEntry ? 'flex' : 'none';
+                }
+
+                if(startEl && endEl) {
+                    startEl.required = isWorkEntry;
+                    endEl.required = isWorkEntry;
+                }
+            };
+
+            elements.statusInput.addEventListener('change', () => handleStatusChange(elements.statusInput.value, elements.presentDetails, elements.startTimeInput, elements.endTimeInput));
+            elements.editStatus.addEventListener('change', () => handleStatusChange(elements.editStatus.value, elements.editPresentDetails, elements.editStartTime, elements.editEndTime));
+            
+            // --- UI Update Utilities (Summary & Rendering) ---
+
+            /**
+             * Calculates and updates the Total Pay and Hours Breakdown for the PROVIDED log entries (Selected Month).
+             */
+            const updateFilteredSummaries = (logs) => {
+                let totalRegularOTPay = 0; 
+                let totalSpecialHolPay = 0; 
+                let totalLegalHolPay = 0; 
+                let totalNonWorkedPaidHolPay = 0; 
+                
+                let totalDayHours = 0;
+                let totalMidHours = 0;
+                let totalNightHours = 0;
+                let totalSpecialHolHours = 0;
+                let totalLegalHolHours = 0;
+                let totalOvertimeHours = 0;
+                let grandTotalWorkedHours = 0;
+                
+                // Summarize ONLY the provided logs
+                logs.forEach(log => {
+                    const logPay = calculateTotalPay(log);
+                    const hours = log.totalHours || 0;
+
+                    // 1. Pay Classification
+                    if (log.status === 'Present') {
+                        totalRegularOTPay += logPay;
+                    } else if (log.status === 'Special Holiday (130%)') {
+                        totalSpecialHolPay += logPay;
+                    } else if (log.status === 'Legal Holiday (200%)') {
+                        totalLegalHolPay += logPay;
+                    } else if (log.status === 'Legal/Special Holiday Non-Work') {
+                        totalNonWorkedPaidHolPay += logPay;
+                    }
+                    
+                    // 2. Hours Classification (Only for worked logs)
+                    if (log.status === 'Present') {
+                        const timeIn = log.timeIn; // e.g., '06:00'
+                        
+                        // Convert time string to minutes past midnight
+                        const [h, m] = timeIn.split(':').map(Number);
+                        const minutes = h * 60 + m;
+
+                        // Shift Classification based on Clock-In Time
+                        // Day Shift: 03:01 to 11:00 (181 min to 660 min)
+                        if (minutes > 180 && minutes <= 660) {
+                            totalDayHours += hours;
+                        } 
+                        // Mid Shift: 11:01 to 19:00 (661 min to 1140 min)
+                        else if (minutes > 660 && minutes <= 1140) {
+                            totalMidHours += hours;
+                        } 
+                        // Night Shift: 19:01 to 03:00 (1141 min to 180 min, covering wrap around)
+                        else { 
+                            totalNightHours += hours;
+                        }
+                        
+                        // Capture pure overtime for the new metric
+                        totalOvertimeHours += log.overtimeHours || 0;
+
+                        grandTotalWorkedHours += hours;
+
+                    } else if (log.status === 'Special Holiday (130%)') {
+                        totalSpecialHolHours += hours;
+                        grandTotalWorkedHours += hours;
+                    } else if (log.status === 'Legal Holiday (200%)') {
+                        totalLegalHolHours += hours;
+                        grandTotalWorkedHours += hours;
+                    }
+                });
+                
+                // Calculate grand total pay
+                const totalPay = totalRegularOTPay + totalSpecialHolPay + totalLegalHolPay + totalNonWorkedPaidHolPay;
+
+                // Update Pay UI elements
+                elements.summaryRegularOTPay.textContent = `₱${totalRegularOTPay.toFixed(2)}`;
+                elements.summarySpecialHolPay.textContent = `₱${totalSpecialHolPay.toFixed(2)}`;
+                elements.summaryLegalHolPay.textContent = `₱${totalLegalHolPay.toFixed(2)}`;
+                elements.summaryNonWorkedPaidHolPay.textContent = `₱${totalNonWorkedPaidHolPay.toFixed(2)}`;
+                elements.summaryTotalPay.textContent = `₱${totalPay.toFixed(2)}`;
+
+                // Update Hours UI elements
+                elements.summaryDayHours.textContent = formatHours(totalDayHours);
+                elements.summaryMidHours.textContent = formatHours(totalMidHours);
+                elements.summaryNightHours.textContent = formatHours(totalNightHours);
+                elements.summarySpecialHolHoursTotal.textContent = formatHours(totalSpecialHolHours);
+                elements.summaryLegalHolHoursTotal.textContent = formatHours(totalLegalHolHours);
+                elements.summaryTotalOvertimeHours.textContent = formatHours(totalOvertimeHours);
+                elements.summaryTotalWorkedHours.textContent = formatHours(grandTotalWorkedHours);
+            };
+            
+            /**
+             * Calculates and updates the Day Count metrics (Total Shifts, Holidays, Non-Work Days) 
+             * based on the provided filtered logs (typically the selected month).
+             */
+            const updateDaysCountSummary = (logs) => {
+                 let workDays = 0, nonWorkDays = 0, specialHolidayDays = 0, legalHolidayDays = 0; 
+                
+                 logs.forEach(log => {
+                    if (log.status === 'Present') {
+                        workDays++;
+                    } else if (log.status === 'Special Holiday (130%)') {
+                        workDays++;
+                        specialHolidayDays++;
+                    } else if (log.status === 'Legal Holiday (200%)') {
+                        workDays++;
+                        legalHolidayDays++;
+                    } else if (log.status === 'Non-Work Day' || log.status === 'Legal/Special Holiday Non-Work') { 
+                        nonWorkDays++;
+                    }
+                });
+                
+                elements.summaryDaysContainer.innerHTML = `
+                    <div class="summary-box bg-gray-800 p-3 rounded-xl"><p class="text-xs text-green-400">Total Shifts</p><p class="text-xl font-bold text-green-300 mt-1">${workDays}</p></div>
+                    <div class="summary-box bg-gray-800 p-3 rounded-xl"><p class="text-xs text-orange-400">Special Hol. Days</p><p class="text-xl font-bold text-orange-300 mt-1">${specialHolidayDays}</p></div>
+                    <div class="summary-box bg-gray-800 p-3 rounded-xl"><p class="text-xs text-red-400">Legal Hol. Days</p><p class="text-xl font-bold text-red-300 mt-1">${legalHolidayDays}</p></div>
+                    <div class="summary-box bg-gray-800 p-3 rounded-xl"><p class="text-xs text-gray-400">Non-Work Days</p><p class="text-xl font-bold text-gray-300 mt-1">${nonWorkDays}</p></div>`;
+            };
+
+
+            const getStatusBadge = (status) => {
+                const c = "text-xs font-medium px-2.5 py-1 rounded-full";
+                const statuses = {
+                    'Present': `bg-green-900/50 text-green-300`,
+                    'Special Holiday (130%)': `bg-yellow-900/50 text-yellow-300`,
+                    'Legal Holiday (200%)': `bg-red-900/50 text-red-300`,
+                    'Non-Work Day': `bg-gray-700 text-gray-300`,
+                    'Legal/Special Holiday Non-Work': `bg-gray-700 text-gray-300` 
+                };
+                return statuses[status] ? `<span class="${c} ${statuses[status]}">${status}</span>` : '';
+            };
+            
+            const renderLogs = (logsToRender) => {
+                elements.logContainer.innerHTML = '';
+                
+                if (logsToRender.length === 0) {
+                    let msg = "No log entries found for this period.";
+                    if (allLogs.length === 0) msg = "No entries recorded yet. Add one above to get started!";
+                    elements.emptyLogMessage.textContent = msg;
+                    elements.emptyLogMessage.style.display = 'block';
+                } else {
+                    elements.emptyLogMessage.style.display = 'none';
+                }
+                
+                // Sort by date (newest first)
+                logsToRender.sort((a, b) => new Date(b.date + 'T00:00:00') - new Date(a.date + 'T00:00:00')).forEach(log => {
+                    const el = document.createElement('div');
+                    el.className = 'bg-gray-900 rounded-xl shadow-lg p-4 new-entry border border-gray-700 hover:border-indigo-500/50 transition duration-150';
+                    const dateObj = new Date(log.date + 'T00:00:00');
+                    const dayOfWeek = dateObj.toLocaleDateString('en-US', { weekday: 'short' });
+                    
+                    let detailsHtml = '', notesHtml = '';
+                    // Check if it's a day where time was recorded/paid
+                    const isWorkEntry = ['Present', 'Legal Holiday (200%)', 'Special Holiday (130%)'].includes(log.status) && log.totalHours > 0;
+                    
+                    if (isWorkEntry) {
+                        const breakdown = `(${formatHours(log.regularHours)} Reg, ${formatHours(log.overtimeHours)} OT)`;
+                        const totalHours = log.totalHours || 0;
+                        const totalPay = calculateTotalPay(log);
+                        
+                        // Icon based on status
+                        let statusIcon = '';
+                        if (log.status === 'Special Holiday (130%)') statusIcon = '<span class="text-yellow-400 mr-1">⭐</span>';
+                        else if (log.status === 'Legal Holiday (200%)') statusIcon = '<span class="text-red-400 mr-1">🔥</span>';
+                        else statusIcon = '<span class="text-green-400 mr-1">⏱️</span>';
+
+                        detailsHtml = `<div class="flex items-center flex-wrap gap-x-3 gap-y-1">
+                                            ${getStatusBadge(log.status)}
+                                            <span class="text-sm text-gray-400">${log.timeIn} - ${log.timeOut}</span>
+                                            <span class="text-lg text-green-400 font-semibold">${statusIcon}${formatHours(totalHours)}</span>
+                                            <span class="text-xs text-gray-500">${breakdown}</span>
+                                        </div>
+                                        <p class="text-sm text-indigo-400 font-medium mt-2">₱${totalPay.toFixed(2)} Estimated Gross Pay</p>`;
+                    } else if (log.status === 'Legal/Special Holiday Non-Work') {
+                        // Display 8 hours equivalent pay for non-worked holiday
+                        const totalPay = calculateTotalPay(log);
+                        detailsHtml = `<div class="flex items-center flex-wrap gap-x-3 gap-y-1">
+                                            ${getStatusBadge(log.status)}
+                                            <span class="text-sm text-gray-400">Paid Day Off Equivalent</span>
+                                        </div>
+                                        <p class="text-sm text-indigo-400 font-medium mt-2">₱${totalPay.toFixed(2)} Estimated Basic Pay (8h)</p>`;
+                    } else { 
+                        detailsHtml = getStatusBadge(log.status); 
+                    }
+                    
+                    if (log.notes) {
+                        notesHtml = `<p class="text-sm text-gray-400 mt-3 pl-3 border-l-2 border-gray-700 ml-1 italic">${log.notes.replace(/\n/g, '<br>')}</p>`;
+                    }
+                        
+                    el.innerHTML = `<div class="flex items-start justify-between">
+                                        <div class="flex-grow">
+                                            <div class="flex items-baseline gap-3">
+                                                <p class="font-bold text-lg text-gray-100">${dateObj.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+                                                <p class="text-sm text-gray-400">${dayOfWeek}</p>
+                                            </div>
+                                            <div class="mt-1">${detailsHtml}</div>
+                                            ${notesHtml}
+                                        </div>
+                                        <div class="flex-shrink-0 flex items-center gap-1">
+                                            <button data-id="${log.id}" data-status="${log.status}" class="edit-btn text-gray-500 hover:text-blue-500 p-2 rounded-full hover:bg-gray-700 transition duration-150" aria-label="Edit Entry">
+                                                <svg class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.536L16.732 3.732z"/></svg>
+                                            </button>
+                                            <button data-id="${log.id}" class="delete-btn text-gray-500 hover:text-red-500 p-2 rounded-full hover:bg-gray-700 transition duration-150" aria-label="Delete Entry">
+                                                <svg class="h-5 w-5 pointer-events-none" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                            </button>
+                                        </div>
+                                    </div>`;
+                    elements.logContainer.appendChild(el);
+                });
+            };
+
+            const populateYearFilter = (selectEl) => {
+                const currentYear = new Date().getFullYear();
+                const years = [...new Set(allLogs.map(log => new Date(log.date + 'T00:00:00').getFullYear()))];
+                if (!years.includes(currentYear)) years.push(currentYear);
+                years.sort((a,b) => b-a);
+                
+                const currentSelectedYear = selectEl.value;
+                selectEl.innerHTML = years.map(year => `<option value="${year}">${year}</option>`).join('');
+                if (years.includes(parseInt(currentSelectedYear))) {
+                    selectEl.value = currentSelectedYear;
+                } else {
+                    selectEl.value = currentYear;
+                }
+            };
+            
+            // Reusable logic to get currently filtered logs
+            const getFilteredLogs = () => {
+                const month = parseInt(elements.monthFilter.value);
+                const year = parseInt(elements.yearFilter.value);
+                // If the selected year is NaN (only happens if there's no data at all), use current year
+                const selectedYear = isNaN(year) ? new Date().getFullYear() : year;
+
+                if (isNaN(month)) return []; 
+                
+                return allLogs.filter(log => {
+                    const logDate = new Date(log.date + 'T00:00:00');
+                    return logDate.getMonth() === month && logDate.getFullYear() === selectedYear;
+                });
+            };
+
+            const applyFilter = () => {
+                const filteredLogs = getFilteredLogs();
+                const year = parseInt(elements.yearFilter.value);
+                const selectedYear = isNaN(year) ? new Date().getFullYear() : year;
+
+                const monthName = elements.monthFilter.options[elements.monthFilter.selectedIndex].text;
+                elements.logHistoryTitle.textContent = `Log History for ${monthName} ${selectedYear}`;
+                
+                renderLogs(filteredLogs);
+                updateDaysCountSummary(filteredLogs); // <-- Days count based on selected month
+                updateFilteredSummaries(filteredLogs); // <-- Hours and Pay based on selected month
+            };
+
+            // --- Export Functionality ---
+            const exportLogsToCSV = () => {
+                const logsToExport = getFilteredLogs();
+
+                if (logsToExport.length === 0) {
+                    showConfirmModal('Export Failed', 'No logs found for the selected month to export.', 'OK', null, true);
+                    return;
+                }
+
+                // Define CSV headers
+                const headers = [
+                    "Date", "Status", "Clock In", "Clock Out", "Total Hours (Decimal)", "Regular Hours (Decimal)", 
+                    "Overtime Hours (Decimal)", "Regular Rate (Per Hour)", "Overtime Rate (Per Hour)",
+                    "Holiday Rate (Per Hour)", "Estimated Gross Pay (PHP)", "Notes"
+                ];
+
+                const csvRows = logsToExport.map(log => {
+                    const totalPay = calculateTotalPay(log);
+                    const regRate = payRates.regular || DEFAULT_RATES.regular;
+                    const otRate = payRates.overtime || DEFAULT_RATES.overtime;
+                    const specialRate = payRates.specialHoliday || DEFAULT_RATES.specialHoliday;
+                    const legalRate = payRates.legalHoliday || DEFAULT_RATES.legalHoliday;
+                    
+                    let holidayRate = 0;
+                    if (log.status === 'Special Holiday (130%)') holidayRate = specialRate;
+                    else if (log.status === 'Legal Holiday (200%)') holidayRate = legalRate;
+
+                    // Helper to escape double quotes and enclose values in double quotes for proper CSV handling
+                    const escape = (value) => `"${String(value).replace(/"/g, '""')}"`;
+
+                    return [
+                        escape(log.date),
+                        escape(log.status),
+                        escape(log.timeIn),
+                        escape(log.timeOut),
+                        // Log 8 hours for non-worked paid holidays in the decimal hour columns
+                        escape(log.status === 'Legal/Special Holiday Non-Work' ? PAID_HOLIDAY_HOURS_EQUIVALENT.toFixed(2) : log.totalHours.toFixed(2)),
+                        escape(log.regularHours.toFixed(2)),
+                        escape(log.overtimeHours.toFixed(2)),
+                        escape(regRate.toFixed(2)),
+                        escape(otRate.toFixed(2)),
+                        escape(holidayRate.toFixed(2)),
+                        escape(totalPay.toFixed(2)),
+                        escape(log.notes)
+                    ].join(',');
+                });
+
+                const csvContent = [headers.join(','), ...csvRows].join('\n');
+                
+                // Determine filename
+                const monthName = elements.monthFilter.options[elements.monthFilter.selectedIndex].text;
+                const year = elements.yearFilter.value;
+                const filename = `Work_Log_${monthName}_${year}.csv`;
+
+                // Create a Blob and trigger download
+                const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+                const link = document.createElement('a');
+                
+                if (link.download !== undefined) { 
+                    const url = URL.createObjectURL(blob);
+                    link.setAttribute('href', url);
+                    link.setAttribute('download', filename);
+                    link.style.visibility = 'hidden';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showConfirmModal('Export Complete', `Successfully exported data for ${monthName} ${year} to ${filename}.`, 'OK', null, true);
+                } else {
+                    showConfirmModal('Export Error', 'Your browser does not fully support automatic CSV download. Please update your browser.', 'OK', null, true);
+                }
+            };
+            
+            // --- Event Handlers (History/Modals) ---
+            elements.logContainer.addEventListener('click', (e) => {
+                const deleteBtn = e.target.closest('.delete-btn');
+                if (deleteBtn) {
+                    const logId = parseInt(deleteBtn.dataset.id);
+                    elements.confirmModalTitle.textContent = 'Delete Log Entry';
+                    elements.confirmModalText.textContent = 'Are you sure you want to permanently delete this log entry? This action cannot be undone.';
+                    elements.confirmModalAction.textContent = 'Delete';
+                    elements.confirmModalBackdrop.style.display = 'flex';
+                    elements.confirmModalAction.onclick = () => {
+                        allLogs = allLogs.filter(log => log.id !== logId);
+                        saveLogs();
+                        populateYearFilter(elements.yearFilter);
+                        applyFilter(); // Triggers updateFilteredSummaries
+                        closeConfirmModal();
+                    };
+                }
+
+                const editBtn = e.target.closest('.edit-btn');
+                if (editBtn) {
+                    const logId = parseInt(editBtn.dataset.id);
+                    const logToEdit = allLogs.find(log => log.id === logId);
+                    if (logToEdit) {
+                        elements.editLogId.value = logToEdit.id;
+                        elements.editDate.value = logToEdit.date;
+                        elements.editStatus.value = logToEdit.status;
+                        elements.editStartTime.value = logToEdit.timeIn || '00:00';
+                        elements.editEndTime.value = logToEdit.timeOut || '00:00';
+                        elements.editNotes.value = logToEdit.notes || '';
+                        
+                        handleStatusChange(logToEdit.status, elements.editPresentDetails, elements.editStartTime, elements.editEndTime);
+                        elements.editModalBackdrop.style.display = 'flex';
+                    }
+                }
+            });
+
+            elements.editForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+
+                const logId = parseInt(elements.editLogId.value);
+                const logIndex = allLogs.findIndex(log => log.id === logId);
+
+                if (logIndex === -1) { closeEditModal(); return; }
+
+                const newDate = elements.editDate.value;
+                const newStatus = elements.editStatus.value;
+                const newNotes = elements.editNotes.value.trim();
+                let newTimeIn = elements.editStartTime.value;
+                let newTimeOut = elements.editEndTime.value;
+
+                let totalHours = 0, regularHours = 0, overtimeHours = 0;
+                const isWorkEntry = ['Present', 'Legal Holiday (200%)', 'Special Holiday (130%)'].includes(newStatus);
+
+                if (isWorkEntry) {
+                    totalHours = calculateTotalHours(newDate, newTimeIn, newTimeOut);
+                    regularHours = Math.min(totalHours, 8);
+                    overtimeHours = Math.max(0, totalHours - 8);
+
+                    if (totalHours <= 0) {
+                         showConfirmModal('Invalid Shift', 'Clock Out time must be after Clock In time (handling for overnight shifts is included).', 'Close', null, true);
+                         return; 
+                    }
+                } else {
+                    newTimeIn = '00:00';
+                    newTimeOut = '00:00';
+                }
+
+                allLogs[logIndex] = { 
+                    id: logId,
+                    date: newDate, 
+                    status: newStatus,
+                    notes: newNotes,
+                    timeIn: newTimeIn,
+                    timeOut: newTimeOut,
+                    totalHours: totalHours,
+                    regularHours: regularHours,
+                    overtimeHours: overtimeHours,
+                };
+                
+                saveLogs();
+                populateYearFilter(elements.yearFilter); // Update year list in case date was changed to a new year
+                applyFilter(); // Triggers updateFilteredSummaries
+                closeEditModal();
+            });
+
+            elements.applyFilterBtn.addEventListener('click', applyFilter);
+            elements.exportCsvBtn.addEventListener('click', exportLogsToCSV); 
+            
+            // --- Modal Functions ---
+            /**
+             * @param {boolean} [hideActionButton=false] If true, only the Cancel button is shown (used for alerts).
+             */
+            const showConfirmModal = (title, text, actionText, actionCallback, hideActionButton = false) => {
+                elements.confirmModalTitle.textContent = title;
+                elements.confirmModalText.textContent = text;
+                elements.confirmModalAction.textContent = actionText;
+                elements.confirmModalBackdrop.style.display = 'flex';
+                elements.confirmModalAction.onclick = () => {
+                    closeConfirmModal();
+                    if (actionCallback) actionCallback();
+                };
+                elements.confirmModalCancel.onclick = closeConfirmModal;
+                elements.confirmModalAction.style.display = hideActionButton ? 'none' : 'inline-block';
+                elements.confirmModalCancel.textContent = hideActionButton ? 'OK' : 'Cancel';
+            };
+            const closeConfirmModal = () => elements.confirmModalBackdrop.style.display = 'none';
+            elements.confirmModalBackdrop.addEventListener('click', (e) => { 
+                 if (e.target === elements.confirmModalBackdrop) closeConfirmModal(); 
+            });
+
+
+            const closeEditModal = () => elements.editModalBackdrop.style.display = 'none';
+            elements.editModalCancel.addEventListener('click', closeEditModal);
+            elements.editModalBackdrop.addEventListener('click', (e) => { 
+                 if (e.target === elements.editModalBackdrop) closeEditModal(); 
+            });
+
+
+            // --- Rates Modal Logic ---
+            elements.payRateBtn.addEventListener('click', () => {
+                // Populate the form with current rates before opening
+                elements.rateRegular.value = payRates.regular;
+                elements.rateOvertime.value = payRates.overtime;
+                elements.rateSpecialHoliday.value = payRates.specialHoliday;
+                elements.rateLegalHoliday.value = payRates.legalHoliday;
+                elements.ratesSettingsModalBackdrop.style.display = 'flex';
+            });
+            
+            elements.ratesSettingsModalBackdrop.addEventListener('click', (e) => {
+                if (e.target === elements.ratesSettingsModalBackdrop) {
+                    elements.ratesSettingsModalBackdrop.style.display = 'none';
+                }
+            });
+
+            elements.ratesForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                payRates = {
+                    regular: parseFloat(elements.rateRegular.value) || DEFAULT_RATES.regular,
+                    overtime: parseFloat(elements.rateOvertime.value) || DEFAULT_RATES.overtime,
+                    specialHoliday: parseFloat(elements.rateSpecialHoliday.value) || DEFAULT_RATES.specialHoliday,
+                    legalHoliday: parseFloat(elements.rateLegalHoliday.value) || DEFAULT_RATES.legalHoliday,
+                };
+                saveRates();
+                elements.ratesSettingsModalBackdrop.style.display = 'none';
+                
+                applyFilter(); // Important: Re-render logs and re-calculate summaries with new rates
+                showConfirmModal('Rates Saved', 'Your new hourly pay rates have been saved successfully.', 'OK', null, true);
+            });
+
+
+            // --- Data Management Modal Logic ---
+            const populateDeleteMonthYear = () => {
+                const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+                const existingDates = new Map();
+                
+                allLogs.forEach(log => {
+                    const date = new Date(log.date + 'T00:00:00');
+                    const year = date.getFullYear();
+                    const month = date.getMonth();
+                    if(!existingDates.has(year)) existingDates.set(year, new Set());
+                    existingDates.get(year).add(month);
+                });
+
+                const years = Array.from(existingDates.keys()).sort((a,b) => b-a);
+                elements.deleteYearSelect.innerHTML = years.map(y => `<option value="${y}">${y}</option>`).join('');
+
+                const updateMonths = () => {
+                    const selectedYear = parseInt(elements.deleteYearSelect.value);
+                    // Ensure selectedYear is valid before calling .get()
+                    const months = Array.from(existingDates.get(selectedYear) || []).sort((a,b) => a-b);
+                    elements.deleteMonthSelect.innerHTML = months.map(m => `<option value="${m}">${monthNames[m]}</option>`).join('');
+                    
+                    if(months.length === 0) {
+                        elements.deleteMonthSelect.innerHTML = '<option value="" disabled selected>No data for this year</option>';
+                        elements.deleteMonthBtn.disabled = true;
+                        elements.deleteMonthBtn.classList.add('opacity-50');
+                    } else {
+                         elements.deleteMonthBtn.disabled = false;
+                         elements.deleteMonthBtn.classList.remove('opacity-50');
+                    }
+                };
+                
+                elements.deleteYearSelect.removeEventListener('change', updateMonths);
+                elements.deleteYearSelect.addEventListener('change', updateMonths);
+                
+                if (years.length > 0) updateMonths();
+                else {
+                    elements.deleteMonthSelect.innerHTML = '<option value="" disabled selected>No data exists</option>';
+                    elements.deleteYearSelect.innerHTML = '<option value="" disabled selected>No data exists</option>';
+                    elements.deleteMonthBtn.disabled = true;
+                    elements.deleteMonthBtn.classList.add('opacity-50');
+                }
+            };
+
+            elements.manageDataBtn.addEventListener('click', () => {
+                populateDeleteMonthYear();
+                elements.manageDataModalBackdrop.style.display = 'flex';
+            });
+            
+            elements.manageDataCloseBtn.addEventListener('click', () => elements.manageDataModalBackdrop.style.display = 'none');
+            elements.manageDataModalBackdrop.addEventListener('click', (e) => { 
+                 if (e.target === elements.manageDataModalBackdrop) elements.manageDataModalBackdrop.style.display = 'none'; 
+            });
+            
+            elements.deleteAllBtn.addEventListener('click', () => {
+                showConfirmModal(
+                    'Delete All Log Data',
+                    'Are you sure you want to permanently delete ALL logs? This cannot be undone and is saved locally.',
+                    'Yes, Delete All',
+                    () => {
+                        allLogs = [];
+                        saveLogs();
+                        populateYearFilter(elements.yearFilter);
+                        applyFilter(); // Triggers updateFilteredSummaries
+                        elements.manageDataModalBackdrop.style.display = 'none';
+                        showConfirmModal('Data Wiped', 'All log data has been permanently deleted.', 'OK', null, true);
+                    }
+                );
+            });
+
+            elements.deleteMonthBtn.addEventListener('click', () => {
+                const month = parseInt(elements.deleteMonthSelect.value);
+                const year = parseInt(elements.deleteYearSelect.value);
+                
+                if (isNaN(month) || isNaN(year)) {
+                    showConfirmModal('Error', 'Please select a valid month and year to delete.', 'Close', null, true);
+                    return;
+                }
+                
+                const monthName = elements.deleteMonthSelect.options[elements.deleteMonthSelect.selectedIndex].text;
+                
+                showConfirmModal(
+                    `Delete Data for ${monthName} ${year}`,
+                    `Are you sure you want to delete all log entries for ${monthName} ${year}? This cannot be undone.`,
+                    'Yes, Delete',
+                    () => {
+                        const originalLength = allLogs.length;
+                        allLogs = allLogs.filter(log => {
+                            const logDate = new Date(log.date + 'T00:00:00');
+                            return !(logDate.getMonth() === month && logDate.getFullYear() === year);
+                        });
+                        saveLogs();
+                        populateYearFilter(elements.yearFilter);
+                        applyFilter(); // Triggers updateFilteredSummaries
+                        elements.manageDataModalBackdrop.style.display = 'none';
+                        showConfirmModal('Month Deleted', `${originalLength - allLogs.length} entries for ${monthName} ${year} have been deleted.`, 'OK', null, true);
+                    }
+                );
+            });
+            // --- END Data Management Modal Logic ---
+
+
+            // --- App Initialization ---
+            loadLogs();
+            loadRates(); // Load pay rates
+            
+            // Set up main form defaults
+            elements.dateInput.value = getTodayString();
+            
+            // Set up filter defaults
+            elements.monthFilter.value = new Date().getMonth();
+            populateYearFilter(elements.yearFilter);
+            
+            // Handle initial status UI visibility
+            handleStatusChange(elements.statusInput.value, elements.presentDetails, elements.startTimeInput, elements.endTimeInput);
+            
+            // Initial render of logs and all Summaries (uses filtered logs - current month by default)
+            applyFilter(); 
+            
+            // PWA Placeholder (Service Worker)
+            if ('serviceWorker' in navigator) {
+                window.addEventListener('load', () => {
+                    // console.log('Service Worker placeholder registered.');
+                });
+            }
+        });
+    </script>
+</body>
+</html>
+
