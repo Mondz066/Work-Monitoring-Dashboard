@@ -132,38 +132,45 @@
                 Pay Breakdown (Selected Month)
             </h2>
              <!-- PAY BREAKDOWN METRICS (Updated) -->
+             <!-- MODIFIED: Changed layout to a single grid with 6 columns (3 rows of 2) -->
              <div class="grid grid-cols-2 sm:grid-cols-2 gap-3 mb-4">
-                 <!-- SEPARATED REGULAR PAY -->
+                 <!-- SEPARATED REGULAR PAY (1/6) -->
                  <div class="summary-box bg-gray-800 p-3 rounded-xl">
                      <p class="text-xs font-semibold text-green-400">Total Regular Pay</p>
                      <p id="summary-regular-pay" class="text-xl font-bold text-green-300 mt-1">₱0.00</p>
                  </div>
-                 <!-- SEPARATED OVERTIME PAY -->
+                 <!-- SEPARATED OVERTIME PAY (2/6) -->
                  <div class="summary-box bg-gray-800 p-3 rounded-xl">
                      <p class="text-xs font-semibold text-pink-400">Total Overtime Pay</p>
                      <p id="summary-overtime-pay" class="text-xl font-bold text-pink-300 mt-1">₱0.00</p>
                  </div>
                  
+                 <!-- SPECIAL HOLIDAY PAY (3/6) -->
                  <div class="summary-box bg-gray-800 p-3 rounded-xl">
                      <p class="text-xs font-semibold text-yellow-400">Special Hol. (130%) Pay</p>
                      <p id="summary-special-hol-pay" class="text-xl font-bold text-yellow-300 mt-1">₱0.00</p>
                  </div>
+                 <!-- LEGAL HOLIDAY PAY (4/6) -->
                  <div class="summary-box bg-gray-800 p-3 rounded-xl">
                      <p class="text-xs font-semibold text-red-400">Legal Hol. (200%) Pay</p>
                      <p id="summary-legal-hol-pay" class="text-xl font-bold text-red-300 mt-1">₱0.00</p>
                  </div>
+                 
+                 <!-- NON-WORKED PAID HOLIDAY PAY (5/6) -->
                  <div class="summary-box bg-gray-800 p-3 rounded-xl">
                      <p class="text-xs font-semibold text-indigo-400">Non-Worked Paid Hol. Pay</p>
                      <p id="summary-non-worked-paid-hol-pay" class="text-xl font-bold text-indigo-300 mt-1">₱0.00</p>
                  </div>
+                 
+                 <!-- TOTAL NIGHT DIFFERENTIAL PAY (6/6) - Now aligned with Non-Worked Paid Hol. -->
+                 <div class="summary-box bg-gray-800 p-3 rounded-xl border border-blue-700/50">
+                     <p class="text-xs font-semibold text-blue-400">Total Night Differential Pay</p>
+                     <!-- Changed text-2xl to text-xl for alignment consistency with siblings -->
+                     <p id="summary-night-differential-pay" class="text-xl font-bold text-blue-300 mt-1">₱0.00</p>
+                 </div>
              </div>
-             <!-- NIGHT DIFFERENTIAL PAY METRIC -->
-             <div class="grid grid-cols-1 mb-4">
-                <div class="summary-box bg-gray-800 p-3 rounded-xl border border-blue-700/50">
-                    <p class="text-xs font-semibold text-blue-400">Total Night Differential Pay</p>
-                    <p id="summary-night-differential-pay" class="text-2xl font-bold text-blue-300 mt-1">₱0.00</p>
-                </div>
-             </div>
+             <!-- END MODIFIED PAY BREAKDOWN METRICS -->
+
             <!-- Total Pay Box -->
              <div class="grid grid-cols-1">
                 <div class="summary-box bg-indigo-900/50 p-3 rounded-xl border border-indigo-700/50">
@@ -382,7 +389,8 @@
     </div>
 
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
+        // Use a function wrapper to ensure all variables are scoped locally
+        (function() {
             // --- Element Declarations ---
             const elements = {
                 logForm: document.getElementById('log-form'), dateInput: document.getElementById('date'),
@@ -499,12 +507,15 @@
                 const oneMinute = 60 * 1000;
                 const actualEndTime = endDateTime.getTime(); 
 
+                // Iterate through the shift duration minute by minute
                 while (t.getTime() < actualEndTime) {
                     const currentHour = t.getHours(); 
+                    // Check if the current minute falls between 22:00 (10 PM) and 05:59 (6 AM)
                     if (currentHour >= 22 || currentHour < 6) {
                         nightMinutes++;
                     }
                     t = new Date(t.getTime() + oneMinute);
+                    // Safety break to prevent infinite loop, though unnecessary with correct logic
                     if (t.getTime() > actualEndTime + oneMinute) break; 
                 }
                 return nightMinutes / 60;
@@ -520,11 +531,13 @@
 
                 // Base pay calculation for NON-REGULAR SHIFTS or PAID HOLIDAYS
                 if (log.status === 'Special Holiday (130%)') {
-                    return hours * specialRate;
+                    // For paid holiday, pay includes the regular rate plus the premium
+                    return hours * specialRate; 
                 } else if (log.status === 'Legal Holiday (200%)') {
+                    // For paid holiday, pay includes the regular rate plus the premium
                     return hours * legalRate;
                 } else if (log.status === 'Legal/Special Holiday Non-Work') {
-                    // Paid basic for 8 hours (paid day off)
+                    // Paid basic for 8 hours (paid day off at regular rate)
                     return PAID_HOLIDAY_HOURS_EQUIVALENT * regRate;
                 }
                 // Regular and OT pay for 'Present' status is calculated separately in updateFilteredSummaries
@@ -564,8 +577,134 @@
                 
                 return basePay + nightDifferentialPay;
             };
+            
+            // Function to generate the HTML for a single log entry
+            const createLogEntryHtml = (log) => {
+                const totalPay = calculateTotalPay(log);
+                const isWorkDay = ['Present', 'Special Holiday (130%)', 'Legal Holiday (200%)'].includes(log.status);
 
+                let statusColor, shiftDetails, hoursDetails;
+                
+                if (log.status === 'Present') {
+                    statusColor = 'bg-indigo-600';
+                    shiftDetails = `${log.timeIn} - ${log.timeOut}`;
+                    hoursDetails = `<span class="text-xs text-indigo-300">Reg: ${formatHours(log.regularHours)}, OT: ${formatHours(log.overtimeHours)}</span>`;
+                } else if (log.status === 'Special Holiday (130%)') {
+                    statusColor = 'bg-yellow-600';
+                    shiftDetails = isWorkDay ? `${log.timeIn} - ${log.timeOut}` : 'Non-Worked';
+                    hoursDetails = isWorkDay ? `<span class="text-xs text-yellow-300">Total: ${formatHours(log.totalHours)}</span>` : '';
+                } else if (log.status === 'Legal Holiday (200%)') {
+                    statusColor = 'bg-red-600';
+                    shiftDetails = isWorkDay ? `${log.timeIn} - ${log.timeOut}` : 'Non-Worked';
+                    hoursDetails = isWorkDay ? `<span class="text-xs text-red-300">Total: ${formatHours(log.totalHours)}</span>` : '';
+                } else if (log.status === 'Legal/Special Holiday Non-Work') {
+                    statusColor = 'bg-green-700';
+                    shiftDetails = 'Paid Day Off (8h)';
+                    hoursDetails = `<span class="text-xs text-green-300">Paid: ${PAID_HOLIDAY_HOURS_EQUIVALENT}h 00m</span>`;
+                } else { // Non-Work Day
+                    statusColor = 'bg-gray-600';
+                    shiftDetails = 'Day Off / Leave';
+                    hoursDetails = '';
+                }
+                
+                const ndBadge = log.nightDifferentialHours > 0 ? 
+                    `<span class="text-xs text-blue-400 bg-blue-900/50 py-0.5 px-2 rounded-full font-semibold mr-2">ND: ${formatHours(log.nightDifferentialHours)}</span>` : '';
+
+                return `
+                    <div id="log-${log.id}" class="new-entry bg-gray-800 p-4 rounded-xl shadow-xl flex justify-between items-center transition duration-300 hover:bg-gray-700 border-l-4 border-l-indigo-500">
+                        <!-- Date & Status Column -->
+                        <div class="flex flex-col flex-1 min-w-[120px]">
+                            <p class="text-lg font-bold text-white">${log.date}</p>
+                            <span class="text-xs font-semibold text-gray-200 py-1 px-2 rounded-full mt-1 w-fit ${statusColor}">${log.status}</span>
+                        </div>
+
+                        <!-- Shift & Hours Column -->
+                        <div class="flex flex-col flex-1 mx-3 text-center sm:text-left min-w-[100px] max-w-[150px]">
+                             <p class="text-sm font-medium text-gray-300">${shiftDetails}</p>
+                             ${hoursDetails}
+                             <div class="mt-1">${ndBadge}</div>
+                        </div>
+
+                        <!-- Pay & Actions Column -->
+                        <div class="flex flex-col items-end min-w-[120px]">
+                            <p class="text-xl font-bold text-green-400">₱${totalPay.toFixed(2)}</p>
+                            <div class="mt-2 flex space-x-2">
+                                <button data-id="${log.id}" class="edit-btn text-sm p-1 text-blue-400 hover:text-blue-300 transition duration-150 rounded-lg" title="Edit">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-7-3l-4 4M15 7l-4 4m0 0l-5.464 5.464a1 1 0 00.707 1.707L15 15m4-4l-1.586-1.586a2 2 0 00-2.828 0L7 16m14-9a2 2 0 00-2-2H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V9z"></path></svg>
+                                </button>
+                                <button data-id="${log.id}" class="delete-btn text-sm p-1 text-red-400 hover:text-red-300 transition duration-150 rounded-lg" title="Delete">
+                                    <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" /></svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            };
+
+            // Renderer
+            const renderLogs = (logs) => {
+                elements.logContainer.innerHTML = '';
+                if (logs.length === 0) {
+                    elements.emptyLogMessage.style.display = 'block';
+                } else {
+                    elements.emptyLogMessage.style.display = 'none';
+                    // Sort logs by date descending
+                    logs.sort((a, b) => new Date(b.date) - new Date(a.date));
+                    logs.forEach(log => {
+                        elements.logContainer.innerHTML += createLogEntryHtml(log);
+                    });
+                    addLogEventListeners();
+                }
+            };
+            
             // --- UI/UX & EVENT HANDLERS ---
+            
+            const addLogEventListeners = () => {
+                // Delete Button Handlers
+                document.querySelectorAll('.delete-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const logId = parseInt(e.currentTarget.dataset.id);
+                        const log = allLogs.find(l => l.id === logId);
+                        if (!log) return;
+                        
+                        showConfirmModal(
+                            'Confirm Deletion', 
+                            `Are you sure you want to delete the log entry for ${log.date} (${log.status})?`, 
+                            'Yes, Delete', 
+                            () => deleteLog(logId)
+                        );
+                    });
+                });
+                
+                // Edit Button Handlers
+                document.querySelectorAll('.edit-btn').forEach(button => {
+                    button.addEventListener('click', (e) => {
+                        const logId = parseInt(e.currentTarget.dataset.id);
+                        const log = allLogs.find(l => l.id === logId);
+                        if (!log) return;
+                        
+                        elements.editLogId.value = log.id;
+                        elements.editDate.value = log.date;
+                        elements.editStatus.value = log.status;
+                        elements.editStartTime.value = log.timeIn === '00:00' ? '08:00' : log.timeIn;
+                        elements.editEndTime.value = log.timeOut === '00:00' ? '16:00' : log.timeOut;
+                        elements.editNotes.value = log.notes;
+                        
+                        // Set up UI visibility based on status
+                        handleStatusChange(log.status, elements.editPresentDetails, elements.editStartTime, elements.editEndTime);
+                        
+                        elements.editModalBackdrop.style.display = 'flex';
+                    });
+                });
+            };
+            
+            const deleteLog = (logId) => {
+                allLogs = allLogs.filter(log => log.id !== logId);
+                saveLogs();
+                populateYearFilter(elements.yearFilter);
+                applyFilter();
+                showConfirmModal('Deleted', 'The log entry has been deleted.', 'OK', null, true);
+            };
 
             // Shift Presets
             elements.shiftPresets.addEventListener('click', (e) => {
@@ -582,7 +721,10 @@
                 
                 if(detailsEl && elements.shiftPresets) {
                     detailsEl.style.display = isWorkEntry ? 'grid' : 'none';
-                    elements.shiftPresets.style.display = isWorkEntry ? 'flex' : 'none';
+                    // Check if we are handling the ADD form (which has elements.shiftPresets)
+                    if (detailsEl === elements.presentDetails) {
+                        elements.shiftPresets.style.display = isWorkEntry ? 'flex' : 'none';
+                    }
                 }
 
                 if(startEl && endEl) {
@@ -647,6 +789,7 @@
                 let totalOvertimePay = 0;
                 
                 let pay = { specialHol: 0, legalHol: 0, nonWorkedPaidHol: 0, nightDifferential: 0, total: 0 };
+                // Hours separated by shift type (day: 6am-2pm, mid: 2pm-10pm, night: 10pm-6am)
                 let hours = { day: 0, mid: 0, night: 0, specialHol: 0, legalHol: 0, overtime: 0, totalWorked: 0 };
                 
                 const regRate = payRates.regular || DEFAULT_RATES.regular;
@@ -675,10 +818,15 @@
                     const isWorkDay = ['Present', 'Special Holiday (130%)', 'Legal Holiday (200%)'].includes(log.status);
 
                     if (isWorkDay) {
+                        // Approximate shift classification based on clock in time
                         const [h, m] = log.timeIn.split(':').map(Number);
-                        const minutes = h * 60 + m;
-                        if (minutes > 180 && minutes <= 660) hours.day += logHours; 
-                        else if (minutes > 660 && minutes <= 1140) hours.mid += logHours; 
+                        const minutes = h * 60 + m; // Total minutes past midnight
+                        
+                        // 06:00 (360 min) to 14:00 (840 min)
+                        if (minutes >= 360 && minutes < 840) hours.day += logHours; 
+                        // 14:00 (840 min) to 22:00 (1320 min)
+                        else if (minutes >= 840 && minutes < 1320) hours.mid += logHours; 
+                        // 22:00 (1320 min) to 06:00 (360 min - must wrap around)
                         else hours.night += logHours; 
 
                         if (log.status === 'Special Holiday (130%)') hours.specialHol += logHours;
@@ -714,6 +862,7 @@
                  let workDays = 0, nonWorkDays = 0, specialHolidayDays = 0, legalHolidayDays = 0; 
                 
                  logs.forEach(log => {
+                    // Use a Set to ensure we only count one entry per day if multiple exist for the same day (though the app design prevents this)
                     if (log.status === 'Present') workDays++;
                     else if (log.status === 'Special Holiday (130%)') { workDays++; specialHolidayDays++; }
                     else if (log.status === 'Legal Holiday (200%)') { workDays++; legalHolidayDays++; }
@@ -730,6 +879,7 @@
             // Filtering and App Control
             const populateYearFilter = (selectEl) => {
                 const currentYear = new Date().getFullYear();
+                // Extract unique years from logs, ensuring 'currentYear' is present
                 const years = [...new Set(allLogs.map(log => new Date(log.date + 'T00:00:00').getFullYear()))];
                 if (!years.includes(currentYear)) years.push(currentYear);
                 years.sort((a,b) => b-a);
@@ -798,6 +948,7 @@
                     else if (log.status === 'Legal Holiday (200%)') holidayRate = payRates.legalHoliday || DEFAULT_RATES.legalHoliday;
 
                     const escape = (value) => `"${String(value).replace(/"/g, '""')}"`;
+                    // Ensure non-work paid holidays show 8 hours for export consistency
                     const totalHoursDecimal = log.status === 'Legal/Special Holiday Non-Work' ? PAID_HOLIDAY_HOURS_EQUIVALENT.toFixed(2) : log.totalHours.toFixed(2);
                     const ndHoursDecimal = log.nightDifferentialHours ? log.nightDifferentialHours.toFixed(2) : '0.00';
 
@@ -892,7 +1043,11 @@
                 elements.rateNightDifferential.value = payRates.nightDifferential; 
                 elements.ratesSettingsModalBackdrop.style.display = 'flex';
             });
-            elements.ratesSettingsModalBackdrop.addEventListener('click', (e) => { if (e.target === elements.ratesSettingsModalBackdrop) elements.ratesSettingsModalBackdrop.style.display = 'none'; });
+            elements.ratesSettingsModalBackdrop.addEventListener('click', (e) => { 
+                if (e.target === elements.ratesSettingsModalBackdrop) {
+                    elements.ratesSettingsModalBackdrop.style.display = 'none';
+                }
+            });
             elements.ratesForm.addEventListener('submit', (e) => {
                 e.preventDefault();
                 payRates = {
@@ -937,8 +1092,14 @@
                     }
                 };
                 
-                elements.deleteYearSelect.removeEventListener('change', updateMonths);
+                // Remove previous listener before adding new one
+                const oldUpdateMonths = elements.deleteYearSelect._updateMonths;
+                if (oldUpdateMonths) {
+                    elements.deleteYearSelect.removeEventListener('change', oldUpdateMonths);
+                }
+
                 elements.deleteYearSelect.addEventListener('change', updateMonths);
+                elements.deleteYearSelect._updateMonths = updateMonths; // Store reference to remove later
                 
                 if (years.length > 0) updateMonths();
                 else {
@@ -977,14 +1138,19 @@
 
 
             // --- APP INITIALIZATION ---
-            loadLogs();
-            loadRates();
-            elements.dateInput.value = getTodayString();
-            elements.monthFilter.value = new Date().getMonth();
-            populateYearFilter(elements.yearFilter);
-            handleStatusChange(elements.statusInput.value, elements.presentDetails, elements.startTimeInput, elements.endTimeInput);
-            applyFilter(); 
-        });
+            const initializeApp = () => {
+                loadLogs();
+                loadRates();
+                elements.dateInput.value = getTodayString();
+                elements.monthFilter.value = new Date().getMonth();
+                populateYearFilter(elements.yearFilter);
+                handleStatusChange(elements.statusInput.value, elements.presentDetails, elements.startTimeInput, elements.endTimeInput);
+                applyFilter(); 
+            };
+            
+            // Wait for DOM to be fully loaded before initializing
+            document.addEventListener('DOMContentLoaded', initializeApp);
+        })();
     </script>
 </body>
 </html>
