@@ -146,7 +146,7 @@
                  </div>
                  <!-- SEPARATED OVERTIME PAY (2/6) -->
                  <div id="summary-overtime-box" class="summary-box bg-gray-800 p-3 rounded-xl">
-                     <p id="summary-overtime-label" class="text-xs font-semibold text-pink-400">Total Premiums Added</p>
+                     <p id="summary-overtime-label" class="text-xs font-semibold text-pink-400">Total Overtime Pay</p>
                      <p id="summary-overtime-pay" class="text-xl font-bold text-pink-300 mt-1">₱0.00</p>
                  </div>
                  
@@ -187,7 +187,7 @@
             <!-- SHIFT HOURS SUMMARY (UPDATED FOR ALIGNMENT) -->
             <h3 class="text-lg font-bold mb-3 mt-6 text-gray-300 border-t border-gray-700 pt-4">Hours Summary (Selected Month)</h3>
             
-            <div id="overall-hours-summary-container" class="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            <div id="overall-hours-summary-container" class="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-3 gap-3">
                 
                 <!-- 1. Total Shift Hours (Aligned) -->
                 <div class="summary-box bg-gray-800 p-3 rounded-xl border border-green-700/50">
@@ -201,10 +201,16 @@
                     <p id="summary-total-overtime-hours" class="text-xl font-bold text-pink-300 mt-1">0h 00m</p>
                 </div>
 
-                <!-- 3. Special Hol. Hours -->
+                <!-- 3. NEW: Night Diff Hours -->
+                <div class="summary-box bg-gray-800 p-3 rounded-xl border border-blue-700/50">
+                    <p class="text-xs font-semibold text-blue-400">Night Diff Hours</p>
+                    <p id="summary-night-diff-hours" class="text-xl font-bold text-blue-300 mt-1">0h 00m</p>
+                </div>
+                
+                <!-- 4. Special Hol. Hours -->
                 <div class="summary-box bg-gray-800 p-3 rounded-xl"><p class="text-xs font-semibold text-yellow-400">Special Hol. Hours</p><p id="summary-special-hol-hours-total" class="text-xl font-bold text-yellow-300 mt-1">0h 00m</p></div>
                 
-                <!-- 4. Legal Hol. Hours -->
+                <!-- 5. Legal Hol. Hours -->
                 <div class="summary-box bg-gray-800 p-3 rounded-xl"><p class="text-xs font-semibold text-red-400">Legal Hol. Hours</p><p id="summary-legal-hol-hours-total" class="text-xl font-bold text-red-300 mt-1">0h 00m</p></div>
             </div>
             
@@ -353,10 +359,19 @@
                 </div>
                 
                 <!-- FIXED PAY INPUT (Only visible in Fixed mode) -->
-                 <div id="fixed-monthly-pay-group" class="hidden">
-                    <label for="rate-fixed-monthly" class="block text-sm font-medium text-gray-300 mb-1">Fixed Monthly Salary (₱)</label>
-                    <input type="number" step="100" min="0" id="rate-fixed-monthly" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500 transition duration-150" placeholder="e.g., 20000.00">
-                    <p class="text-xs text-gray-400 mt-1">This amount is used as the monthly base (₱20,000 / 30 days daily rate) for deduction calculations.</p>
+                 <div id="fixed-monthly-pay-group" class="hidden space-y-4">
+                    <div>
+                        <label for="rate-fixed-monthly" class="block text-sm font-medium text-gray-300 mb-1">Fixed Monthly Salary (₱)</label>
+                        <input type="number" step="100" min="0" id="rate-fixed-monthly" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500 transition duration-150" placeholder="e.g., 20000.00">
+                        <p class="text-xs text-gray-400 mt-1">Total base salary for the entire cycle.</p>
+                    </div>
+                    
+                    <!-- UPDATED DESCRIPTION: Fixed Days per Cycle -->
+                    <div>
+                        <label for="rate-fixed-days-per-cycle" class="block text-sm font-medium text-gray-300 mb-1">Fixed Working Days per Cycle</label>
+                        <input type="number" step="1" min="1" id="rate-fixed-days-per-cycle" required class="w-full p-3 bg-gray-700 border border-gray-600 rounded-lg text-white focus:ring-purple-500 focus:border-purple-500 transition duration-150" placeholder="e.g., 26">
+                        <p class="text-xs text-gray-400 mt-1">This determines the daily deduction rate: (Salary / Days) for non-paid leave days.</p>
+                    </div>
                 </div>
 
                 <!-- HOURLY RATE GROUP (Used for ALL PREMIUMS in both modes) -->
@@ -456,13 +471,14 @@
                 summaryNightDifferentialPay: document.getElementById('summary-night-differential-pay'), 
                 summaryTotalPay: document.getElementById('summary-total-pay'),
                 // HOURS SUMMARIES
-                // REMOVED summaryDayHours, summaryMidHours, summaryNightHours elements
                 summaryRegularHoursTotal: document.getElementById('summary-regular-hours-total'), // NOW REPRESENTS TOTAL SHIFT HOURS
                 summarySpecialHolHoursTotal: document.getElementById('summary-special-hol-hours-total'),
                 summaryLegalHolHoursTotal: document.getElementById('summary-legal-hol-hours-total'),
                 summaryTotalOvertimeHours: document.getElementById('summary-total-overtime-hours'), 
                 summaryTotalWorkedHours: document.getElementById('summary-total-worked-hours'),
                 summaryDaysContainer: document.getElementById('summary-days-container'),
+                // NEW: Night Diff Hours Element
+                summaryNightDiffHours: document.getElementById('summary-night-diff-hours'),
                 // BUTTONS AND FILTERS
                 manageDataBtn: document.getElementById('manage-data-btn'),
                 logContainer: document.getElementById('log-container'), emptyLogMessage: document.getElementById('empty-log-message'),
@@ -480,7 +496,8 @@
                 ratesForm: document.getElementById('rates-form'), rateRegular: document.getElementById('rate-regular'), rateOvertime: document.getElementById('rate-overtime'),
                 rateSpecialHoliday: document.getElementById('rate-special-holiday'), rateLegalHoliday: document.getElementById('rate-legal-holiday'),
                 rateNightDifferential: document.getElementById('rate-night-differential'), 
-                rateFixedMonthly: document.getElementById('rate-fixed-monthly'), // New Fixed Pay Input
+                rateFixedMonthly: document.getElementById('rate-fixed-monthly'), // Fixed Pay Input
+                rateFixedDaysPerCycle: document.getElementById('rate-fixed-days-per-cycle'), // NEW Fixed Days Input
                 payModeHourly: document.getElementById('pay-mode-hourly'),       // New Pay Mode Radios
                 payModeFixed: document.getElementById('pay-mode-fixed'),
                 hourlyRateGroup: document.getElementById('hourly-rate-group'),
@@ -495,20 +512,20 @@
             const LOGS_STORAGE_KEY = 'workMonitoringAppLogs_v7_manual'; 
             const RATES_STORAGE_KEY = 'workMonitoringAppRates_v4'; // Updated key for new data structure
             const PAID_HOLIDAY_HOURS_EQUIVALENT = 8; 
-            const DAYS_PER_FIXED_MONTH = 30; // Standardize 30 days for fixed salary deduction rate calculation
+            const DAYS_PER_FIXED_MONTH = 30; // Kept for reference but not used in calculation
             let payRates = {};
 
             // --- DATA & UTILITY FUNCTIONS ---
 
-            // UPDATED DEFAULT RATES TO 0.00
             const DEFAULT_RATES = {
                 regular: 0.00,
                 overtime: 0.00, 
                 specialHoliday: 0.00, 
                 legalHoliday: 0.00, 
                 nightDifferential: 0.00, 
-                payMode: 'hourly', // New default pay mode
-                fixedMonthlyPay: 0.00, // New default fixed pay
+                payMode: 'hourly', 
+                fixedMonthlyPay: 0.00, 
+                fixedDaysPerCycle: 26, // New default based on common monthly working days
             };
 
             // Persistence
@@ -534,6 +551,10 @@
                 }
                  if (typeof payRates.fixedMonthlyPay === 'undefined' || isNaN(payRates.fixedMonthlyPay)) {
                     payRates.fixedMonthlyPay = DEFAULT_RATES.fixedMonthlyPay;
+                }
+                // Load new field or use default
+                 if (typeof payRates.fixedDaysPerCycle === 'undefined' || isNaN(payRates.fixedDaysPerCycle) || payRates.fixedDaysPerCycle === 0) {
+                    payRates.fixedDaysPerCycle = DEFAULT_RATES.fixedDaysPerCycle;
                 }
             };
             const saveRates = () => { try { localStorage.setItem(RATES_STORAGE_KEY, JSON.stringify(payRates)); } catch (error) { console.error("Error saving rates:", error); } };
@@ -853,18 +874,21 @@
 
                 // Initialize hourly pay structure
                 let totalRegularPay = 0; 
-                let totalOvertimePay = 0; // Only used in hourly mode
-                
+                let totalOvertimePayCalculated = 0; // NEW: OT Hours * OT Rate (Used in both modes for the OT Pay box)
+                let totalFixedModePremiums = 0;    // ND + Holiday Premiums only (used for Fixed Mode Gross Total) 
+
                 // Initialize fixed pay structure
                 const fixedMonthlyPay = payRates.fixedMonthlyPay || DEFAULT_RATES.fixedMonthlyPay;
-                const dailyDeductionRate = fixedMonthlyPay / DAYS_PER_FIXED_MONTH; 
+                const fixedDaysPerCycle = payRates.fixedDaysPerCycle || DEFAULT_RATES.fixedDaysPerCycle;
+                
+                // NEW DAILY DEDUCTION RATE CALCULATION: Fixed Pay / Fixed Working Days
+                const dailyDeductionRate = fixedDaysPerCycle > 0 ? fixedMonthlyPay / fixedDaysPerCycle : 0; 
 
                 let nonPaidLeaveDays = 0;
-                let totalPremiums = 0; // OT + ND + Holiday Premiums (used in fixed mode)
 
                 let pay = { specialHol: 0, legalHol: 0, nonWorkedPaidHol: 0, nightDifferential: 0, total: 0 };
-                // Keep Day, Mid, Night for correct shift calculation, even if not displayed individually
-                let hours = { day: 0, mid: 0, night: 0, specialHol: 0, legalHol: 0, overtime: 0, totalWorked: 0 }; 
+                // Keep Day, Mid, Night for correct shift classification logic
+                let hours = { day: 0, mid: 0, night: 0, specialHol: 0, legalHol: 0, overtime: 0, nightDifferential: 0, totalWorked: 0 }; 
                 
                 const regRate = payRates.regular || DEFAULT_RATES.regular;
                 const otRate = payRates.overtime || DEFAULT_RATES.overtime;
@@ -877,18 +901,17 @@
                     const calcLog = {...log, status: calcStatus};
                     
                     const logHours = calcLog.totalHours || 0;
+                    const otHours = calcLog.overtimeHours || 0;
                     const isWorkDay = ['Present', 'Special Holiday (130%)', 'Legal Holiday (200%)'].includes(calcStatus);
 
                     // --- 1. HOUR CALCULATION (Independent of Pay Mode) ---
                     if (isWorkDay) {
                         const regularWorkedHours = calcLog.regularHours || 0; // Max 8
                         
-                        // --- NEW GRANULAR SHIFT CLASSIFICATION FOR REGULAR HOURS (Fix for 18:00-06:00) ---
+                        // --- GRANULAR SHIFT CLASSIFICATION FOR REGULAR HOURS (for Total Shift Hours) ---
                         let startTime = new Date(`${calcLog.date}T${calcLog.timeIn}:00`);
                         let endTime = new Date(`${calcLog.date}T${calcLog.timeOut}:00`);
-                        if (endTime.getTime() <= startTime.getTime()) {
-                           endTime.setDate(endTime.getDate() + 1);
-                        }
+                        if (endTime.getTime() <= startTime.getTime()) { endTime.setDate(endTime.getDate() + 1); }
                         
                         let current = new Date(startTime.getTime());
                         const actualEndTime = endTime.getTime(); 
@@ -896,52 +919,45 @@
                         let daySegmentMinutes = 0;
                         let midSegmentMinutes = 0;
                         let nightSegmentMinutes = 0;
-                        
-                        // Only classify the first 8 hours of the shift as "regular shift hours" for the summary
-                        let minutesClassified = 0; 
                         const maxClassificationMinutes = regularWorkedHours * 60; 
+                        let minutesClassified = 0; 
 
                         while (current.getTime() < actualEndTime && minutesClassified < maxClassificationMinutes) {
                             const currentHour = current.getHours(); 
                             
-                            // Day Shift: 06:00 (6h) to 13:59 (13h)
-                            if (currentHour >= 6 && currentHour < 14) { 
-                                daySegmentMinutes++;
-                            } 
-                            // Mid Shift: 14:00 (14h) to 21:59 (21h)
-                            else if (currentHour >= 14 && currentHour < 22) { 
-                                midSegmentMinutes++;
-                            } 
-                            // Night Shift: 22:00 (22h) to 05:59 (5h)
-                            else { 
-                                nightSegmentMinutes++;
-                            }
+                            if (currentHour >= 6 && currentHour < 14) { daySegmentMinutes++; } 
+                            else if (currentHour >= 14 && currentHour < 22) { midSegmentMinutes++; } 
+                            else { nightSegmentMinutes++; }
                             
                             minutesClassified++;
                             current = new Date(current.getTime() + oneMinute);
                         }
 
-                        // Accumulate segments (used later to calculate total regular hours)
+                        // Accumulate segments 
                         hours.day += daySegmentMinutes / 60;
                         hours.mid += midSegmentMinutes / 60;
                         hours.night += nightSegmentMinutes / 60;
-                        // --- END NEW CLASSIFICATION ---
+                        
+                        // Accumulate Night Differential Hours 
+                        hours.nightDifferential += calcLog.nightDifferentialHours || 0; 
 
                         if (calcStatus === 'Special Holiday (130%)') hours.specialHol += logHours;
                         if (calcStatus === 'Legal Holiday (200%)') hours.legalHol += logHours;
                         
-                        hours.overtime += calcLog.overtimeHours || 0;
+                        hours.overtime += otHours;
                         hours.totalWorked += logHours;
                     }
+                    
+                    // --- 2. ACCUMULATE TOTAL OVERTIME PAY (OT Hours * OT Rate) ---
+                    totalOvertimePayCalculated += otHours * otRate;
 
-                    // --- 2. PAY CALCULATION (Mode Dependent) ---
+                    // --- 3. PAY CALCULATION (Mode Dependent) ---
                     if (payMode === 'hourly') {
                         // Recalculate full hourly pay for summary purposes
                         calculateTotalPay(calcLog); 
                         
                         if (calcStatus === 'Present') {
                             totalRegularPay += (calcLog.regularHours || 0) * regRate;
-                            totalOvertimePay += (calcLog.overtimeHours || 0) * otRate;
                         } else if (calcStatus === 'Special Holiday (130%)') {
                             pay.specialHol += logHours * specialRate;
                         } else if (calcStatus === 'Legal Holiday (200%)') {
@@ -952,64 +968,61 @@
                         pay.nightDifferential += calculateNDPay(calcLog, payRates);
                     
                     } else if (payMode === 'fixed') {
-                        let logPremiums = 0;
                         
-                        if (calcStatus === 'Non-Work Day') {
+                        // Deduction Logic: Only "Non-Work Day" (Leave/No work (Non Paid)) counts as a deduction day.
+                        if (log.status === 'Non-Work Day') { 
                             nonPaidLeaveDays++;
                         }
-                        
-                        if (calcStatus === 'Present') {
-                            // OT Premiums (The amount over the regular hourly rate)
-                            logPremiums += (calcLog.overtimeHours || 0) * (otRate - regRate); 
-                        } else if (calcStatus === 'Special Holiday (130%)') {
+
+                        // Fixed Mode Premiums (Only Holiday and ND Premiums contribute to this total)
+                        if (calcStatus === 'Special Holiday (130%)') {
                             // Holiday Premiums (The amount over the regular hourly rate)
-                            logPremiums += logHours * (specialRate - regRate);
+                            const premium = logHours * (specialRate - regRate);
+                            totalFixedModePremiums += premium;
+                            pay.specialHol += premium; // For display in Special Hol box
                             
                         } else if (calcStatus === 'Legal Holiday (200%)') {
                             // Holiday Premiums (The amount over the regular hourly rate)
-                            logPremiums += logHours * (legalRate - regRate);
-                        } 
+                            const premium = logHours * (legalRate - regRate);
+                            totalFixedModePremiums += premium;
+                            pay.legalHol += premium; // For display in Legal Hol box
+                        } else if (calcStatus === 'Legal/Special Holiday Non-Work') {
+                             pay.nonWorkedPaidHol += dailyDeductionRate; // Paid day off uses the calculated daily rate
+                        }
                         
                         // ND Premium (Always added)
-                        logPremiums += calculateNDPay(calcLog, payRates);
-                        
-                        totalPremiums += logPremiums;
-                        
-                        // Accrue premiums for display consistency (special hol, legal hol, nd)
-                        if (calcStatus === 'Special Holiday (130%)') pay.specialHol += logPremiums;
-                        if (calcStatus === 'Legal Holiday (200%)') pay.legalHol += logPremiums;
-                        if (calcStatus === 'Legal/Special Holiday Non-Work') pay.nonWorkedPaidHol += 0; 
-                        
-                        // Accrue ND premium separately for its own box
-                        pay.nightDifferential += calculateNDPay(calcLog, payRates);
+                        const ndPay = calculateNDPay(calcLog, payRates);
+                        totalFixedModePremiums += ndPay;
+                        pay.nightDifferential += ndPay; // For display in ND box
                     }
                 });
 
-                // --- 3. FINAL SUMMARY UPDATE ---
+                // --- 4. FINAL SUMMARY UPDATE (Pay) ---
 
                 if (payMode === 'hourly') {
-                    pay.total = totalRegularPay + totalOvertimePay + pay.specialHol + pay.legalHol + pay.nonWorkedPaidHol + pay.nightDifferential;
+                    // Total = Regular Pay + OT Pay + Holiday Pay (Total Rate) + Non-Worked Paid Hol + ND Pay
+                    pay.total = totalRegularPay + totalOvertimePayCalculated + pay.specialHol + pay.legalHol + pay.nonWorkedPaidHol + pay.nightDifferential;
                     
                     elements.summaryRegularLabel.textContent = `Total Regular Pay`;
-                    elements.summaryOvertimeLabel.textContent = `Total Overtime Pay`;
+                    elements.summaryOvertimeLabel.textContent = `Total Overtime Pay`; 
 
                     elements.summaryRegularPay.textContent = `₱${totalRegularPay.toFixed(2)}`;
-                    elements.summaryOvertimePay.textContent = `₱${totalOvertimePay.toFixed(2)}`;
+                    elements.summaryOvertimePay.textContent = `₱${totalOvertimePayCalculated.toFixed(2)}`; 
 
                 } else if (payMode === 'fixed') {
+                    // Calculate Fixed Base Pay (Monthly - Deductions)
+                    // Deduction = nonPaidLeaveDays * (Fixed Monthly / Fixed Days per Cycle)
                     const totalDeduction = nonPaidLeaveDays * dailyDeductionRate;
-                    // Max(0) ensures the fixed base doesn't go below 0 if deductions exceed it.
                     const totalFixedBasePay = Math.max(0, fixedMonthlyPay - totalDeduction); 
                     
-                    pay.total = totalFixedBasePay + totalPremiums;
+                    // Fixed Gross Pay = Fixed Base + OT Pay (Full Rate) + Paid Hol Day (Daily Rate) + Holiday Premiums + ND Pay
+                    pay.total = totalFixedBasePay + totalOvertimePayCalculated + pay.nonWorkedPaidHol + totalFixedModePremiums;
 
-                    // Update Labels for Fixed Mode
                     elements.summaryRegularLabel.textContent = `Fixed Base Pay (Gross)`;
-                    elements.summaryOvertimeLabel.textContent = `Total Premiums Added`; 
+                    elements.summaryOvertimeLabel.textContent = `Total Overtime Pay`; // Renamed label
 
-                    // Update Pay UI (Reusing slots)
-                    elements.summaryRegularPay.textContent = `₱${totalFixedBasePay.toFixed(2)}`; // Fixed Base Pay (after deduction)
-                    elements.summaryOvertimePay.textContent = `₱${totalPremiums.toFixed(2)}`;    // Total Premiums Added (OT+ND+HOL Premium)
+                    elements.summaryRegularPay.textContent = `₱${totalFixedBasePay.toFixed(2)}`;
+                    elements.summaryOvertimePay.textContent = `₱${totalOvertimePayCalculated.toFixed(2)}`; // NEW: Pure OT Pay
                 }
 
                 // Update common Pay UI elements
@@ -1020,12 +1033,12 @@
                 elements.summaryNightDifferentialPay.textContent = `₱${pay.nightDifferential.toFixed(2)}`;
                 elements.summaryTotalPay.textContent = `₱${pay.total.toFixed(2)}`;
                 
-                // --- HOURS UI UPDATE (Combined Regular Hours) ---
-                // The combination requested by the user is the sum of the internally categorized Day/Mid/Night regular hours.
+                // --- 5. HOURS UI UPDATE ---
                 const totalRegularHours = hours.day + hours.mid + hours.night;
 
-                elements.summaryRegularHoursTotal.textContent = formatHours(totalRegularHours); // NOW REPRESENTS "Total Shift Hours"
+                elements.summaryRegularHoursTotal.textContent = formatHours(totalRegularHours); // Total Shift Hours
                 
+                elements.summaryNightDiffHours.textContent = formatHours(hours.nightDifferential); // Night Diff Hours
                 elements.summarySpecialHolHoursTotal.textContent = formatHours(hours.specialHol);
                 elements.summaryLegalHolHoursTotal.textContent = formatHours(hours.legalHol);
                 elements.summaryTotalOvertimeHours.textContent = formatHours(hours.overtime);
@@ -1237,6 +1250,7 @@
                     elements.fixedMonthlyPayGroup.style.display = 'block';
                     elements.rateRegular.required = false;
                     elements.rateFixedMonthly.required = true;
+                    elements.rateFixedDaysPerCycle.required = true; // NEW
                 } else { // hourly
                     elements.hourlyRateGroup.querySelectorAll('div').forEach(el => {
                         if (el.id === 'rate-regular-group') {
@@ -1246,6 +1260,7 @@
                     elements.fixedMonthlyPayGroup.style.display = 'none';
                     elements.rateRegular.required = true;
                     elements.rateFixedMonthly.required = false;
+                    elements.rateFixedDaysPerCycle.required = false; // NEW
                 }
             };
 
@@ -1261,6 +1276,7 @@
                 elements.rateSpecialHoliday.value = payRates.specialHoliday; elements.rateLegalHoliday.value = payRates.legalHoliday;
                 elements.rateNightDifferential.value = payRates.nightDifferential; 
                 elements.rateFixedMonthly.value = payRates.fixedMonthlyPay;
+                elements.rateFixedDaysPerCycle.value = payRates.fixedDaysPerCycle; // NEW
 
                 // Set radio state
                 if (payRates.payMode === 'fixed') {
@@ -1293,7 +1309,14 @@
                     nightDifferential: parseFloat(elements.rateNightDifferential.value) || DEFAULT_RATES.nightDifferential, 
                     payMode: selectedMode,
                     fixedMonthlyPay: parseFloat(elements.rateFixedMonthly.value) || DEFAULT_RATES.fixedMonthlyPay,
+                    fixedDaysPerCycle: parseInt(elements.rateFixedDaysPerCycle.value) || DEFAULT_RATES.fixedDaysPerCycle, // NEW
                 };
+                
+                // Prevent division by zero
+                if (payRates.payMode === 'fixed' && payRates.fixedDaysPerCycle <= 0) {
+                     showConfirmModal('Error', 'Fixed Working Days per Cycle must be greater than zero.', 'Close', null, true);
+                     return;
+                }
 
                 saveRates(); elements.ratesSettingsModalBackdrop.style.display = 'none';
                 applyFilter(); showConfirmModal('Rates Saved', 'Your new pay rates and mode have been saved successfully.', 'OK', null, true);
