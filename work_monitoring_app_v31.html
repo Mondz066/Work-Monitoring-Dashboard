@@ -748,7 +748,8 @@
 
                 if (isWorkEntry) {
                     totalHours = calculateTotalHours(date, startTime, endTime);
-                    regularHours = Math.min(totalHours, 8);
+                    // regularHours is capped at 8 for the summary logic
+                    regularHours = Math.min(totalHours, 8); 
                     overtimeHours = Math.max(0, totalHours - 8);
                     nightDifferentialHours = calculateNightHours(date, startTime, endTime);
 
@@ -789,7 +790,7 @@
                 let totalOvertimePay = 0;
                 
                 let pay = { specialHol: 0, legalHol: 0, nonWorkedPaidHol: 0, nightDifferential: 0, total: 0 };
-                // Hours separated by shift type (day: 6am-2pm, mid: 2pm-10pm, night: 10pm-6am)
+                // Hours separated by shift type (day: 6am-2pm, mid: 2pm-6pm, night: 6pm-6am)
                 let hours = { day: 0, mid: 0, night: 0, specialHol: 0, legalHol: 0, overtime: 0, totalWorked: 0 };
                 
                 const regRate = payRates.regular || DEFAULT_RATES.regular;
@@ -818,20 +819,32 @@
                     const isWorkDay = ['Present', 'Special Holiday (130%)', 'Legal Holiday (200%)'].includes(log.status);
 
                     if (isWorkDay) {
+                        
+                        // IMPORTANT CHANGE: Use the pre-calculated regular (8h max) hours for shift categorization
+                        // This ensures Day/Mid/Night only show the 8-hour component.
+                        const regularWorkedHours = log.regularHours || 0; 
+                        
                         // Approximate shift classification based on clock in time
                         const [h, m] = log.timeIn.split(':').map(Number);
                         const minutes = h * 60 + m; // Total minutes past midnight
                         
-                        // 06:00 (360 min) to 14:00 (840 min)
-                        if (minutes >= 360 && minutes < 840) hours.day += logHours; 
-                        // 14:00 (840 min) to 22:00 (1320 min)
-                        else if (minutes >= 840 && minutes < 1320) hours.mid += logHours; 
-                        // 22:00 (1320 min) to 06:00 (360 min - must wrap around)
-                        else hours.night += logHours; 
+                        // Day Shift: 06:00 (360 min) to 13:59 (839 min)
+                        if (minutes >= 360 && minutes < 840) { 
+                            hours.day += regularWorkedHours; 
+                        }
+                        // Mid Shift: 14:00 (840 min) to 17:59 (1079 min) - ADJUSTED: 18:00 now starts Night Shift
+                        else if (minutes >= 840 && minutes < 1080) {
+                            hours.mid += regularWorkedHours; 
+                        }
+                        // Night Shift: 18:00 (1080 min) to 05:59 (359 min - wraps around)
+                        else {
+                            hours.night += regularWorkedHours; 
+                        }
 
                         if (log.status === 'Special Holiday (130%)') hours.specialHol += logHours;
                         if (log.status === 'Legal Holiday (200%)') hours.legalHol += logHours;
                         
+                        // Overtime hours always reflect the amount exceeding 8 hours
                         hours.overtime += log.overtimeHours || 0;
                         hours.totalWorked += logHours;
                     }
